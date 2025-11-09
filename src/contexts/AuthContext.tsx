@@ -45,8 +45,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     try {
+      console.log('Initiating Google OAuth with callback:', `${window.location.origin}/auth/callback`);
       // Redirect to Google OAuth
-      account.createOAuth2Session(
+      await account.createOAuth2Session(
         'google',
         `${window.location.origin}/auth/callback`,
         `${window.location.origin}/login`
@@ -59,8 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGithub = async () => {
     try {
+      console.log('Initiating GitHub OAuth with callback:', `${window.location.origin}/auth/callback`);
       // Redirect to GitHub OAuth
-      account.createOAuth2Session(
+      await account.createOAuth2Session(
         'github',
         `${window.location.origin}/auth/callback`,
         `${window.location.origin}/login`

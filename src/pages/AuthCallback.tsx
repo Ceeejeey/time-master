@@ -12,9 +12,18 @@ const AuthCallback = () => {
       try {
         console.log('AuthCallback: Starting authentication check...');
         console.log('AuthCallback: Current URL:', window.location.href);
+        console.log('AuthCallback: Search params:', window.location.search);
+        console.log('AuthCallback: Hash:', window.location.hash);
         
-        // Get the URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
+        // Get the URL parameters from either search or hash
+        let urlParams = new URLSearchParams(window.location.search);
+        
+        // If no params in search, try hash (sometimes OAuth redirects use hash)
+        if (!urlParams.has('userId') && window.location.hash) {
+          const hashParams = window.location.hash.substring(1); // Remove #
+          urlParams = new URLSearchParams(hashParams);
+        }
+        
         const userId = urlParams.get('userId');
         const secret = urlParams.get('secret');
         
@@ -26,10 +35,12 @@ const AuthCallback = () => {
           console.log('AuthCallback: Creating session with OAuth2 token...');
           await account.createSession(userId, secret);
           console.log('AuthCallback: Session created successfully!');
+        } else {
+          console.log('AuthCallback: No OAuth params found, checking existing session...');
         }
         
         // Wait a bit for session to be established
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Verify the session was created
         console.log('AuthCallback: Verifying user session...');
