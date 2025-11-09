@@ -13,30 +13,53 @@ const AuthCallback = () => {
         console.log('AuthCallback: Starting authentication check...');
         console.log('AuthCallback: Current URL:', window.location.href);
         
-        // Give the OAuth redirect a moment to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // IMPORTANT: Give more time for OAuth redirect to complete and cookies to be set
+        console.log('AuthCallback: Waiting for OAuth session to be established...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
         
-        // After OAuth redirect, Appwrite automatically creates the session
-        // We just need to verify it exists
-        console.log('AuthCallback: Checking for active session...');
+        // Try multiple times to get the session
+        let user = null;
+        let attempts = 0;
+        const maxAttempts = 5;
         
-        // Try to get the current user - this will work if OAuth succeeded
-        const user = await account.get();
+        while (!user && attempts < maxAttempts) {
+          attempts++;
+          console.log(`AuthCallback: Attempt ${attempts}/${maxAttempts} to verify session...`);
+          
+          try {
+            user = await account.get();
+            console.log('AuthCallback: User authenticated successfully!', user.email);
+            break;
+          } catch (error) {
+            console.log(`AuthCallback: Attempt ${attempts} failed:`, error.message);
+            
+            if (attempts < maxAttempts) {
+              // Wait before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        }
         
         if (user) {
-          console.log('AuthCallback: User authenticated successfully!', user.email);
-          // Small delay to ensure session is fully established
-          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log('AuthCallback: Redirecting to home page...');
           navigate('/', { replace: true });
         } else {
-          console.log('AuthCallback: No user found, redirecting to login');
-          navigate('/login', { replace: true });
+          console.error('AuthCallback: Failed to establish session after all attempts');
+          console.error('AuthCallback: This is a cross-domain cookie issue.');
+          console.error('AuthCallback: Please ensure you have:');
+          console.error('  1. Added time-master-new.appwrite.network as a Platform in Appwrite Console');
+          console.error('  2. Updated OAuth redirect URIs in Google/GitHub settings');
+          console.error('  3. Cleared browser cookies and cache');
+          
+          navigate('/login', { 
+            replace: true,
+            state: { 
+              error: 'Unable to complete authentication. Please ensure cookies are enabled and try again.' 
+            }
+          });
         }
       } catch (error) {
-        console.error('AuthCallback: Authentication error:', error);
-        // If we get a 401, it means the session wasn't created
-        // This is likely due to cross-domain cookie issues
-        console.error('AuthCallback: Failed to establish session. This may be a cross-domain cookie issue.');
+        console.error('AuthCallback: Unexpected error:', error);
         navigate('/login', { 
           replace: true,
           state: { error: 'Authentication failed. Please try again.' }

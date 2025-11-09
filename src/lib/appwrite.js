@@ -4,9 +4,21 @@ const client = new Client()
     .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
     .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
 
-// Set the session to use the same origin policy
-// This is critical for cross-domain OAuth to work properly
+// CRITICAL: Enable credentials for cross-domain requests
+// This allows cookies to be sent with requests to Appwrite API
 client.headers['X-Fallback-Cookies'] = 'true';
+
+// Ensure the client sends credentials with every request
+if (typeof window !== 'undefined') {
+    // Force credentials to be included in cross-origin requests
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (url.toString().includes('appwrite.io')) {
+            options.credentials = 'include';
+        }
+        return originalFetch(url, options);
+    };
+}
 
 const account = new Account(client);
 const databases = new Databases(client);
