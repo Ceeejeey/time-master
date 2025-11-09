@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { getTasks, getTimerSessions, getTodayPlan } from '@/lib/storage';
+import { getTasks, getTimerSessions, getTodayPlan, initializeDefaultData } from '@/lib/storage';
+import { migrateSessionsToSeconds } from '@/lib/migrate-sessions';
 import { Task, TimerSession, TodayPlan } from '@/lib/types';
 import { format } from 'date-fns';
 import { useAuth } from './AuthContext';
@@ -87,6 +88,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Only load data if user is authenticated
     if (user) {
       console.log('DataContext: User authenticated, loading data...', user.email);
+      
+      // Initialize default data and run migrations for this user
+      const initializeUser = async () => {
+        try {
+          await initializeDefaultData();
+          await migrateSessionsToSeconds();
+          console.log('DataContext: User data initialized and migrated');
+        } catch (error) {
+          console.error('DataContext: Error initializing user data:', error);
+        }
+      };
+      
+      initializeUser();
       loadAllData();
 
       // Auto-refresh every 3 seconds for real-time updates
