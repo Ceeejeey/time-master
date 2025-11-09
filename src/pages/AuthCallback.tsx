@@ -13,24 +13,36 @@ const AuthCallback = () => {
         console.log('AuthCallback: Starting authentication check...');
         console.log('AuthCallback: Current URL:', window.location.href);
         
-        // Wait a bit for Appwrite to process the OAuth callback
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Get the URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId');
+        const secret = urlParams.get('secret');
         
-        // Manually check if user is authenticated
-        console.log('AuthCallback: Checking for user session...');
+        console.log('AuthCallback: userId:', userId);
+        console.log('AuthCallback: secret exists:', !!secret);
+        
+        if (userId && secret) {
+          // Complete the OAuth2 login by creating a session with the secret
+          console.log('AuthCallback: Creating session with OAuth2 token...');
+          await account.createSession(userId, secret);
+          console.log('AuthCallback: Session created successfully!');
+        }
+        
+        // Wait a bit for session to be established
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Verify the session was created
+        console.log('AuthCallback: Verifying user session...');
         const user = await account.get();
         
         if (user) {
-          // Successfully authenticated, redirect to home
           console.log('AuthCallback: User authenticated successfully!', user.email);
           navigate('/', { replace: true });
         } else {
-          // No user found, redirect to login
           console.log('AuthCallback: No user found, redirecting to login');
           navigate('/login', { replace: true });
         }
       } catch (error) {
-        // Authentication failed or session not created
         console.error('AuthCallback: Authentication error:', error);
         navigate('/login', { replace: true });
       } finally {
