@@ -8,6 +8,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithGithub: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,10 +25,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const currentUser = await account.get();
       setUser(currentUser);
+      return currentUser;
     } catch (error) {
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const currentUser = await account.get();
+      setUser(currentUser);
+    } catch (error) {
+      setUser(null);
     }
   };
 
@@ -77,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         loginWithGithub,
         logout,
+        refreshUser,
       }}
     >
       {children}

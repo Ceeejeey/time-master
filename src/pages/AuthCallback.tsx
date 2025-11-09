@@ -1,29 +1,45 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { account } from '@/lib/appwrite';
 import { Clock } from 'lucide-react';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated after OAuth redirect
     const handleCallback = async () => {
-      // Wait a moment for the auth state to update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (user) {
-        // Successfully authenticated, redirect to home
-        navigate('/', { replace: true });
-      } else {
-        // Authentication failed, redirect to login
+      try {
+        console.log('AuthCallback: Starting authentication check...');
+        console.log('AuthCallback: Current URL:', window.location.href);
+        
+        // Wait a bit for Appwrite to process the OAuth callback
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Manually check if user is authenticated
+        console.log('AuthCallback: Checking for user session...');
+        const user = await account.get();
+        
+        if (user) {
+          // Successfully authenticated, redirect to home
+          console.log('AuthCallback: User authenticated successfully!', user.email);
+          navigate('/', { replace: true });
+        } else {
+          // No user found, redirect to login
+          console.log('AuthCallback: No user found, redirecting to login');
+          navigate('/login', { replace: true });
+        }
+      } catch (error) {
+        // Authentication failed or session not created
+        console.error('AuthCallback: Authentication error:', error);
         navigate('/login', { replace: true });
+      } finally {
+        setIsChecking(false);
       }
     };
 
     handleCallback();
-  }, [user, navigate]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
