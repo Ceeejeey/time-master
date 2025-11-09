@@ -1,20 +1,28 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Github, Mail, Zap, Target, TrendingUp } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock, Github, Mail, Zap, Target, TrendingUp, AlertCircle } from 'lucide-react';
 
 const Login = () => {
   const { user, loading, loginWithGoogle, loginWithGithub } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check for error from AuthCallback
+    if (location.state?.error) {
+      setError(location.state.error as string);
+    }
+    
     // If user is already logged in, redirect to home
     if (user && !loading) {
       navigate('/');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, location]);
 
   if (loading) {
     return (
@@ -81,9 +89,20 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             {/* Google Login */}
             <Button
-              onClick={loginWithGoogle}
+              onClick={() => {
+                setError(null);
+                loginWithGoogle();
+              }}
               variant="outline"
               size="lg"
               className="w-full h-14 text-base font-semibold gap-3 hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-red-500/10 hover:border-blue-500/50 transition-all group"
@@ -108,7 +127,10 @@ const Login = () => {
 
             {/* GitHub Login */}
             <Button
-              onClick={loginWithGithub}
+              onClick={() => {
+                setError(null);
+                loginWithGithub();
+              }}
               variant="outline"
               size="lg"
               className="w-full h-14 text-base font-semibold gap-3 hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-pink-500/10 hover:border-purple-500/50 transition-all group"

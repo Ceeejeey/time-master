@@ -12,42 +12,21 @@ const AuthCallback = () => {
       try {
         console.log('AuthCallback: Starting authentication check...');
         console.log('AuthCallback: Current URL:', window.location.href);
-        console.log('AuthCallback: Search params:', window.location.search);
-        console.log('AuthCallback: Hash:', window.location.hash);
         
-        // Get the URL parameters from either search or hash
-        let urlParams = new URLSearchParams(window.location.search);
+        // Give the OAuth redirect a moment to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // If no params in search, try hash (sometimes OAuth redirects use hash)
-        if (!urlParams.has('userId') && window.location.hash) {
-          const hashParams = window.location.hash.substring(1); // Remove #
-          urlParams = new URLSearchParams(hashParams);
-        }
+        // After OAuth redirect, Appwrite automatically creates the session
+        // We just need to verify it exists
+        console.log('AuthCallback: Checking for active session...');
         
-        const userId = urlParams.get('userId');
-        const secret = urlParams.get('secret');
-        
-        console.log('AuthCallback: userId:', userId);
-        console.log('AuthCallback: secret exists:', !!secret);
-        
-        if (userId && secret) {
-          // Complete the OAuth2 login by creating a session with the secret
-          console.log('AuthCallback: Creating session with OAuth2 token...');
-          await account.createSession(userId, secret);
-          console.log('AuthCallback: Session created successfully!');
-        } else {
-          console.log('AuthCallback: No OAuth params found, checking existing session...');
-        }
-        
-        // Wait a bit for session to be established
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Verify the session was created
-        console.log('AuthCallback: Verifying user session...');
+        // Try to get the current user - this will work if OAuth succeeded
         const user = await account.get();
         
         if (user) {
           console.log('AuthCallback: User authenticated successfully!', user.email);
+          // Small delay to ensure session is fully established
+          await new Promise(resolve => setTimeout(resolve, 500));
           navigate('/', { replace: true });
         } else {
           console.log('AuthCallback: No user found, redirecting to login');
@@ -55,7 +34,13 @@ const AuthCallback = () => {
         }
       } catch (error) {
         console.error('AuthCallback: Authentication error:', error);
-        navigate('/login', { replace: true });
+        // If we get a 401, it means the session wasn't created
+        // This is likely due to cross-domain cookie issues
+        console.error('AuthCallback: Failed to establish session. This may be a cross-domain cookie issue.');
+        navigate('/login', { 
+          replace: true,
+          state: { error: 'Authentication failed. Please try again.' }
+        });
       } finally {
         setIsChecking(false);
       }

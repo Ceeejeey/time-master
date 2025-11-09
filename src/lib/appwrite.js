@@ -4,6 +4,10 @@ const client = new Client()
     .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
     .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
 
+// Set the session to use the same origin policy
+// This is critical for cross-domain OAuth to work properly
+client.headers['X-Fallback-Cookies'] = 'true';
+
 const account = new Account(client);
 const databases = new Databases(client);
 
