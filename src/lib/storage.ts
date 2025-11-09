@@ -1,8 +1,18 @@
-import { databases, DATABASE_ID, COLLECTIONS, ID, Query } from './appwrite.js';
+import { databases, DATABASE_ID, COLLECTIONS, ID, Query, account } from './appwrite.js';
 import { 
   User, Workplan, Task, Timeblock, TimerSession, 
   TodayPlan 
 } from './types';
+
+// Get current authenticated user ID
+export const getCurrentUserId = async (): Promise<string> => {
+  try {
+    const user = await account.get();
+    return user.$id;
+  } catch (error) {
+    throw new Error('User not authenticated');
+  }
+};
 
 // User
 export const getUser = async (): Promise<User | null> => {
@@ -62,13 +72,16 @@ export const saveUser = async (user: User): Promise<void> => {
 // Workplans
 export const getWorkplans = async (): Promise<Workplan[]> => {
   try {
+    const userId = await getCurrentUserId();
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.WORKPLANS
+      COLLECTIONS.WORKPLANS,
+      [Query.equal('userId', userId)]
     );
     
     return response.documents.map(doc => ({
       id: doc.$id,
+      userId: doc.userId,
       title: doc.title,
       scope: doc.scope,
       startDate: doc.startDate,
@@ -83,6 +96,7 @@ export const getWorkplans = async (): Promise<Workplan[]> => {
 
 export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
   try {
+    const userId = await getCurrentUserId();
     const existing = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.WORKPLANS,
@@ -90,6 +104,7 @@ export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
     );
     
     const data = {
+      userId: workplan.userId || userId,
       title: workplan.title,
       scope: workplan.scope,
       startDate: workplan.startDate,
@@ -98,6 +113,10 @@ export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
     };
     
     if (existing.documents.length > 0) {
+      // Verify ownership
+      if (existing.documents[0].userId !== userId) {
+        throw new Error('Unauthorized to update this workplan');
+      }
       await databases.updateDocument(
         DATABASE_ID,
         COLLECTIONS.WORKPLANS,
@@ -134,13 +153,16 @@ export const deleteWorkplan = async (id: string): Promise<void> => {
 // Tasks
 export const getTasks = async (): Promise<Task[]> => {
   try {
+    const userId = await getCurrentUserId();
     const response = await databases.listDocuments(
       DATABASE_ID,
-      COLLECTIONS.TASKS
+      COLLECTIONS.TASKS,
+      [Query.equal('userId', userId)]
     );
     
     return response.documents.map(doc => ({
       id: doc.$id,
+      userId: doc.userId,
       title: doc.title,
       description: doc.description,
       priorityQuadrant: doc.priorityQuadrant,
@@ -160,14 +182,22 @@ export const getTasks = async (): Promise<Task[]> => {
 
 export const getTaskById = async (id: string): Promise<Task | null> => {
   try {
+    const userId = await getCurrentUserId();
     const doc = await databases.getDocument(
       DATABASE_ID,
       COLLECTIONS.TASKS,
       id
     );
     
+    // Verify ownership
+    if (doc.userId !== userId) {
+      console.error('Unauthorized access to task');
+      return null;
+    }
+    
     return {
       id: doc.$id,
+      userId: doc.userId,
       title: doc.title,
       description: doc.description,
       priorityQuadrant: doc.priorityQuadrant,
@@ -187,6 +217,7 @@ export const getTaskById = async (id: string): Promise<Task | null> => {
 
 export const saveTask = async (task: Task): Promise<void> => {
   try {
+    const userId = await getCurrentUserId();
     const existing = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.TASKS,
@@ -194,6 +225,7 @@ export const saveTask = async (task: Task): Promise<void> => {
     );
     
     const data = {
+      userId: task.userId || userId, // Use provided userId or current user
       title: task.title,
       description: task.description,
       priorityQuadrant: task.priorityQuadrant,
@@ -203,6 +235,10 @@ export const saveTask = async (task: Task): Promise<void> => {
     };
     
     if (existing.documents.length > 0) {
+      // Verify ownership before updating
+      if (existing.documents[0].userId !== userId) {
+        throw new Error('Unauthorized to update this task');
+      }
       await databases.updateDocument(
         DATABASE_ID,
         COLLECTIONS.TASKS,
@@ -303,10 +339,14 @@ export const saveTimeblock = async (timeblock: Timeblock): Promise<void> => {
 // Timer Sessions
 export const getTimerSessions = async (): Promise<TimerSession[]> => {
   try {
+    const userId = await getCurrentUserId();
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.SESSIONS,
-      [Query.orderDesc('$createdAt')]
+      [
+        Query.equal('userId', userId),
+        Query.orderDesc('$createdAt')
+      ]
     );
     
     return response.documents.map(doc => {
@@ -323,6 +363,7 @@ export const getTimerSessions = async (): Promise<TimerSession[]> => {
       
       return {
         id: doc.$id,
+        userId: doc.userId,
         taskId: doc.taskId,
         timeblockId: doc.timeblockId,
         startTimestamp: doc.startTimestamp,
@@ -344,6 +385,7 @@ export const getTimerSessions = async (): Promise<TimerSession[]> => {
 
 export const saveTimerSession = async (session: TimerSession): Promise<void> => {
   try {
+    const userId = await getCurrentUserId();
     const existing = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.SESSIONS,
@@ -352,6 +394,7 @@ export const saveTimerSession = async (session: TimerSession): Promise<void> => 
     
     // Build data object, excluding undefined fields
     const data: Record<string, unknown> = {
+      userId: session.userId || userId,
       taskId: session.taskId,
       timeblockId: session.timeblockId,
       startTimestamp: session.startTimestamp,
@@ -394,10 +437,14 @@ export const saveTimerSession = async (session: TimerSession): Promise<void> => 
 // Today Plan
 export const getTodayPlan = async (date: string): Promise<TodayPlan | null> => {
   try {
+    const userId = await getCurrentUserId();
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.TODAY_PLANS,
-      [Query.equal('date', date)]
+      [
+        Query.equal('userId', userId),
+        Query.equal('date', date)
+      ]
     );
     
     if (response.documents.length > 0) {
@@ -415,6 +462,7 @@ export const getTodayPlan = async (date: string): Promise<TodayPlan | null> => {
       
       return {
         id: doc.$id,
+        userId: doc.userId,
         date: doc.date,
         targetTimeblocks: doc.targetTimeblocks || 0,
         timeblockDuration: doc.timeblockDuration || 30,
@@ -431,13 +479,18 @@ export const getTodayPlan = async (date: string): Promise<TodayPlan | null> => {
 
 export const saveTodayPlan = async (plan: TodayPlan): Promise<void> => {
   try {
+    const userId = await getCurrentUserId();
     const existing = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.TODAY_PLANS,
-      [Query.equal('date', plan.date)]
+      [
+        Query.equal('userId', userId),
+        Query.equal('date', plan.date)
+      ]
     );
     
     const data = {
+      userId: plan.userId || userId,
       date: plan.date,
       targetTimeblocks: plan.targetTimeblocks || 0,
       timeblockDuration: plan.timeblockDuration || 30,
@@ -447,6 +500,10 @@ export const saveTodayPlan = async (plan: TodayPlan): Promise<void> => {
     };
     
     if (existing.documents.length > 0) {
+      // Verify ownership
+      if (existing.documents[0].userId !== userId) {
+        throw new Error('Unauthorized to update this plan');
+      }
       await databases.updateDocument(
         DATABASE_ID,
         COLLECTIONS.TODAY_PLANS,
@@ -469,10 +526,14 @@ export const saveTodayPlan = async (plan: TodayPlan): Promise<void> => {
 
 export const deleteTodayPlan = async (date: string): Promise<void> => {
   try {
+    const userId = await getCurrentUserId();
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.TODAY_PLANS,
-      [Query.equal('date', date)]
+      [
+        Query.equal('userId', userId),
+        Query.equal('date', date)
+      ]
     );
     
     if (response.documents.length > 0) {
@@ -491,11 +552,16 @@ export const deleteTodayPlan = async (date: string): Promise<void> => {
 // Clear all today's data (plan and sessions)
 export const clearAllTodayData = async (date: string): Promise<void> => {
   try {
+    const userId = await getCurrentUserId();
+    
     // Delete today's plan
     const planResponse = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.TODAY_PLANS,
-      [Query.equal('date', date)]
+      [
+        Query.equal('userId', userId),
+        Query.equal('date', date)
+      ]
     );
     
     if (planResponse.documents.length > 0) {
@@ -516,6 +582,7 @@ export const clearAllTodayData = async (date: string): Promise<void> => {
       DATABASE_ID,
       COLLECTIONS.SESSIONS,
       [
+        Query.equal('userId', userId),
         Query.greaterThanEqual('startTimestamp', todayStart),
         Query.lessThanEqual('startTimestamp', todayEnd),
         Query.limit(100)
@@ -538,15 +605,8 @@ export const clearAllTodayData = async (date: string): Promise<void> => {
 // Initialize default data
 export const initializeDefaultData = async (): Promise<void> => {
   try {
-    const user = await getUser();
-    if (!user) {
-      await saveUser({
-        id: 'user-1',
-        name: 'User',
-        isPremium: false,
-      });
-    }
-
+    // Only initialize timeblocks for authenticated users
+    // User data is now managed by Appwrite Auth
     const timeblocks = await getTimeblocks();
     if (timeblocks.length === 0 || timeblocks === getDefaultTimeblocks()) {
       for (const block of getDefaultTimeblocks()) {
@@ -554,6 +614,7 @@ export const initializeDefaultData = async (): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('Error initializing default data:', error);
+    // User not authenticated yet, skip initialization
+    console.log('Skipping initialization - user not authenticated');
   }
 };

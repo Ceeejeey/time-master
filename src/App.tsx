@@ -7,6 +7,10 @@ import { useEffect } from "react";
 import { initializeDefaultData } from "./lib/storage";
 import { migrateSessionsToSeconds } from "./lib/migrate-sessions";
 import { DataProvider } from "./contexts/DataContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 import Index from "./pages/Home";
 import Today from "./pages/Today";
 import Workplan from "./pages/Workplan";
@@ -31,32 +35,48 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <DataProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <div className="min-h-screen flex flex-col">
-              <Navigation />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/today" element={<Today />} />
-                  <Route path="/workplan" element={<Workplan />} />
-                  <Route path="/timer" element={<Timer />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/settings" element={<Settings />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-            </div>
-          </BrowserRouter>
-        </DataProvider>
+        <AuthProvider>
+          <DataProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+
+                {/* Protected Routes */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <div className="min-h-screen flex flex-col">
+                        <Navigation />
+                        <main className="flex-1">
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/today" element={<Today />} />
+                            <Route path="/workplan" element={<Workplan />} />
+                            <Route path="/timer" element={<Timer />} />
+                            <Route path="/reports" element={<Reports />} />
+                            <Route path="/settings" element={<Settings />} />
+                            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </BrowserRouter>
+          </DataProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

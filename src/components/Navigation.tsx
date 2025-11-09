@@ -1,16 +1,38 @@
-import { Home, Calendar, Clock, BarChart3, Settings, Moon, Sun, Monitor, CalendarCheck } from 'lucide-react';
+import { Home, Calendar, Clock, BarChart3, Settings, Moon, Sun, Monitor, CalendarCheck, LogOut, User } from 'lucide-react';
 import { NavLink } from './NavLink';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from './ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const Navigation = () => {
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const getUserInitials = () => {
+    if (!user?.name) return 'U';
+    const names = user.name.split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[1][0]}`.toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  };
 
   const navItems = [
     { to: '/', icon: Home, label: 'Home' },
@@ -72,6 +94,37 @@ const Navigation = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="ml-2 gap-2 px-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden lg:inline-block text-sm font-medium">
+                    {user?.name || 'User'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Mobile Navigation */}
@@ -108,6 +161,34 @@ const Navigation = () => {
                 <DropdownMenuItem onClick={() => setTheme('system')}>
                   <Monitor className="mr-2 h-4 w-4" />
                   <span>System</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

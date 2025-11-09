@@ -21,6 +21,7 @@ export interface Timeblock {
 
 export interface Task {
   id: string;
+  userId: string; // Owner of this task
   title: string;
   description: string;
   priorityQuadrant: PriorityQuadrant;
@@ -41,6 +42,7 @@ export interface TimeblockAssignment {
 
 export interface Workplan {
   id: string;
+  userId: string; // Owner of this workplan
   title: string;
   scope: WorkplanScope;
   startDate: string; // ISO8601
@@ -58,6 +60,7 @@ export interface TodayTask {
 
 export interface TodayPlan {
   id: string;
+  userId: string; // Owner of this plan
   date: string;
   targetTimeblocks: number;
   timeblockDuration: number; // Duration in minutes for each timeblock
@@ -72,6 +75,7 @@ export interface PausePeriod {
 
 export interface TimerSession {
   id: string;
+  userId: string; // Owner of this session
   taskId: string;
   timeblockId: string;
   startTimestamp: string; // ISO8601
