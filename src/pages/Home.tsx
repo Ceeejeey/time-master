@@ -42,109 +42,109 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Hero Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+        {/* Hero Header - Mobile optimized */}
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="space-y-1">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent leading-tight">
               Welcome Back 👋
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground">
               {format(new Date(), 'EEEE, MMMM d, yyyy')} • Let's crush your goals!
             </p>
           </div>
-          <div className="flex gap-2">
-            <Link to="/today">
-              <Button size="lg" className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
+          <div className="flex flex-wrap gap-2">
+            <Link to="/today" className="flex-1 sm:flex-none">
+              <Button size="lg" className="w-full sm:w-auto gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all touch-manipulation">
                 <Target className="w-4 h-4" />
-                Today's Plan
+                <span className="text-sm sm:text-base">Today's Plan</span>
               </Button>
             </Link>
-            <Link to="/timer">
-              <Button size="lg" variant="outline" className="gap-2 shadow-md hover:shadow-lg transition-all">
+            <Link to="/timer" className="flex-1 sm:flex-none">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto gap-2 shadow-md hover:shadow-lg transition-all touch-manipulation">
                 <Play className="w-4 h-4" />
-                Start Timer
+                <span className="text-sm sm:text-base">Start Timer</span>
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Stats Overview - Responsive grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
           <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                <Zap className="w-3 h-3 text-primary" />
-                PRODUCTIVE TIME
+            <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <Zap className="w-3 h-3 text-primary flex-shrink-0" />
+                <span className="truncate">PRODUCTIVE</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
                 {formatTimeHMS(report.totalWorkTime)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Time well spent</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">Time well spent</p>
             </CardContent>
           </Card>
 
           <Card className="border-2 border-destructive/20 bg-gradient-to-br from-destructive/10 via-destructive/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                <Clock className="w-3 h-3 text-destructive" />
-                WASTED TIME
+            <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <Clock className="w-3 h-3 text-destructive flex-shrink-0" />
+                <span className="truncate">WASTED</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-destructive">
                 {formatTimeHMS(report.totalWastedTime)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Room to improve</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">Room to improve</p>
             </CardContent>
           </Card>
 
           <Card className="border-2 border-secondary/20 bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                <Award className="w-3 h-3 text-secondary" />
-                BLOCKS COMPLETED
+            <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <Award className="w-3 h-3 text-secondary flex-shrink-0" />
+                <span className="truncate">BLOCKS</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-secondary">
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-secondary">
                 {report.blocksCompleted}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {todayPlan ? `of ${todayPlan.targetTimeblocks} planned` : 'Keep going!'}
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">
+                {todayPlan ? `of ${todayPlan.targetTimeblocks}` : 'Keep going!'}
               </p>
             </CardContent>
           </Card>
 
           <Card className="border-2 border-accent/20 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="w-3 h-3 text-accent" />
-                COMPLETION RATE
+            <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <TrendingUp className="w-3 h-3 text-accent flex-shrink-0" />
+                <span className="truncate">RATE</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-accent">
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-accent">
                 {report.completionRatePercent}%
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Success rate</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">Success rate</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="w-3 h-3 text-orange-500" />
-                EFFICIENCY
+          <Card className="border-2 border-orange-500/20 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent hover:shadow-lg hover:scale-105 transition-all col-span-2 sm:col-span-1">
+            <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
+              <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <BarChart3 className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                <span className="truncate">EFFICIENCY</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-500">
+            <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-500">
                 {efficiency}%
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                 {efficiency >= 70 ? 'Excellent!' : efficiency >= 50 ? 'Good job!' : 'You got this!'}
               </p>
             </CardContent>
@@ -154,45 +154,45 @@ const Home = () => {
         {/* Today's Tasks */}
         {todayTasks.length > 0 && (
           <Card className="shadow-xl border-2 border-primary/10">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Target className="w-6 h-6 text-primary" />
-                    Today's Focus
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex-1">
+                  <CardTitle className="text-lg sm:text-xl md:text-2xl flex items-center gap-2">
+                    <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+                    <span>Today's Focus</span>
                   </CardTitle>
-                  <CardDescription className="text-base mt-1">
-                    {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'} on your plate • {todayPlan?.targetTimeblocks || 0} blocks planned
+                  <CardDescription className="text-xs sm:text-sm md:text-base mt-1">
+                    {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'} • {todayPlan?.targetTimeblocks || 0} blocks
                   </CardDescription>
                 </div>
                 <Link to="/today">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto touch-manipulation">
                     <Calendar className="w-4 h-4" />
-                    Manage Plan
+                    <span className="text-sm">Manage</span>
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-3">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid gap-2 sm:gap-3">
                 {todayTasks.slice(0, 4).map(task => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-4 rounded-xl border-2 bg-gradient-to-r from-card to-card/50 hover:shadow-md hover:border-primary/30 transition-all group"
+                    className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 bg-gradient-to-r from-card to-card/50 hover:shadow-md hover:border-primary/30 transition-all group touch-manipulation"
                   >
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                       <div
-                        className="w-4 h-4 rounded-full"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
                         style={{
                           backgroundColor: getPriorityColor(task.priorityQuadrant),
                           boxShadow: `0 0 0 2px hsl(var(--background)), 0 0 0 4px ${getPriorityColor(task.priorityQuadrant)}`,
                         }}
                       />
-                      <div className="flex-1">
-                        <p className="font-semibold text-base">{task.title}</p>
-                        <div className="flex items-center gap-3 mt-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm sm:text-base truncate">{task.title}</p>
+                        <div className="flex items-center gap-2 sm:gap-3 mt-1 sm:mt-2 flex-wrap">
                           <span 
-                            className="text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wide"
+                            className="text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-semibold uppercase tracking-wide whitespace-nowrap"
                             style={{
                               backgroundColor: getPriorityColor(task.priorityQuadrant) + '20',
                               color: getPriorityColor(task.priorityQuadrant),
@@ -200,26 +200,26 @@ const Home = () => {
                           >
                             {getPriorityLabel(task.priorityQuadrant)}
                           </span>
-                          <span className="text-sm text-muted-foreground font-medium">
+                          <span className="text-[10px] sm:text-xs text-muted-foreground font-medium whitespace-nowrap">
                             ⏱ {task.estimatedTotalTimeMinutes} min
                           </span>
                         </div>
                       </div>
                     </div>
-                    <Link to={`/timer?taskId=${task.id}`}>
+                    <Link to={`/timer?taskId=${task.id}`} className="flex-shrink-0">
                       <Button 
                         size="sm" 
-                        className="gap-2 shadow-md hover:shadow-lg transition-all"
+                        className="gap-1 sm:gap-2 shadow-md hover:shadow-lg transition-all touch-manipulation text-xs sm:text-sm h-8 sm:h-9"
                       >
-                        <Play className="w-4 h-4" />
-                        Start
+                        <Play className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="hidden xs:inline">Start</span>
                       </Button>
                     </Link>
                   </div>
                 ))}
                 {todayTasks.length > 4 && (
                   <Link to="/today">
-                    <Button variant="ghost" className="w-full hover:bg-primary/10">
+                    <Button variant="ghost" className="w-full hover:bg-primary/10 touch-manipulation text-sm">
                       View all {todayTasks.length} tasks →
                     </Button>
                   </Link>
@@ -229,75 +229,75 @@ const Home = () => {
           </Card>
         )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Quick Actions - Mobile optimized */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <Link to="/timer" className="block group">
-            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer bg-gradient-to-br from-primary via-primary to-secondary text-white border-0 overflow-hidden relative">
+            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer bg-gradient-to-br from-primary via-primary to-secondary text-white border-0 overflow-hidden relative touch-manipulation">
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardHeader className="relative z-10">
-                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-4">
-                  <Play className="w-7 h-7" />
+              <CardHeader className="relative z-10 p-4 sm:p-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/20 flex items-center justify-center mb-3 sm:mb-4">
+                  <Play className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
-                <CardTitle className="text-2xl">Start Working</CardTitle>
-                <CardDescription className="text-white/80 text-base mt-2">
-                  Begin a new focus session and track your time
+                <CardTitle className="text-xl sm:text-2xl">Start Working</CardTitle>
+                <CardDescription className="text-white/80 text-sm sm:text-base mt-1 sm:mt-2">
+                  Begin a new focus session
                 </CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link to="/reports" className="block group">
-            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-primary/20 hover:border-primary/40 bg-gradient-to-br from-background to-primary/5">
-              <CardHeader>
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <BarChart3 className="w-7 h-7 text-primary" />
+            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-primary/20 hover:border-primary/40 bg-gradient-to-br from-background to-primary/5 touch-manipulation">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                  <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">Analytics</CardTitle>
-                <CardDescription className="text-base mt-2">
-                  Track your productivity patterns and insights
+                <CardTitle className="text-xl sm:text-2xl">Analytics</CardTitle>
+                <CardDescription className="text-sm sm:text-base mt-1 sm:mt-2">
+                  Track your productivity
                 </CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link to="/workplan" className="block group">
-            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-secondary/20 hover:border-secondary/40 bg-gradient-to-br from-background to-secondary/5">
-              <CardHeader>
-                <div className="w-14 h-14 rounded-full bg-secondary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Calendar className="w-7 h-7 text-secondary" />
+            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-secondary/20 hover:border-secondary/40 bg-gradient-to-br from-background to-secondary/5 touch-manipulation">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-secondary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                  <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-secondary" />
                 </div>
-                <CardTitle className="text-2xl">Plan Ahead</CardTitle>
-                <CardDescription className="text-base mt-2">
-                  Create and manage your workplans strategically
+                <CardTitle className="text-xl sm:text-2xl">Plan Ahead</CardTitle>
+                <CardDescription className="text-sm sm:text-base mt-1 sm:mt-2">
+                  Manage workplans
                 </CardDescription>
               </CardHeader>
             </Card>
           </Link>
         </div>
 
-        {/* Priority Tasks or Empty State */}
+        {/* Priority Tasks or Empty State - Mobile optimized */}
         {priorityTasks.length > 0 ? (
           <Card className="border-2 border-destructive/20 bg-gradient-to-br from-destructive/5 to-transparent">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Zap className="w-6 h-6 text-destructive" />
-                High Priority
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl md:text-2xl flex items-center gap-2">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-destructive flex-shrink-0" />
+                <span>High Priority</span>
               </CardTitle>
-              <CardDescription className="text-base">
-                🔥 Essential and urgent tasks that need immediate attention
+              <CardDescription className="text-xs sm:text-sm md:text-base">
+                🔥 Essential and urgent tasks
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
               {priorityTasks.slice(0, 3).map(task => (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-4 rounded-xl bg-destructive/5 border-2 border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30 transition-all group"
+                  className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-destructive/5 border-2 border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30 transition-all group touch-manipulation"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-2 h-12 bg-destructive rounded-full" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-base">{task.title}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                    <div className="w-1.5 sm:w-2 h-10 sm:h-12 bg-destructive rounded-full flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm sm:text-base truncate">{task.title}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
                         ⏱ {task.estimatedTotalTimeMinutes} min • {getPriorityLabel(task.priorityQuadrant)}
                       </p>
                     </div>

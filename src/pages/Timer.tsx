@@ -91,25 +91,25 @@ const Timer = () => {
   const progress = getProgress();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6">
       <div className="container mx-auto max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Focus Timer</h1>
-          <p className="text-muted-foreground">Stay focused and track your productivity</p>
+        <div className="text-center mb-4 sm:mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Focus Timer</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Stay focused and track your productivity</p>
         </div>
 
         {!isRunning ? (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Setup Timer</CardTitle>
-              <CardDescription>
+          <Card className="mb-4 sm:mb-6">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl">Setup Timer</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 {isFromToday 
                   ? `Ready to work on "${selectedTask?.title}" for ${todayPlan?.timeblockDuration} minutes`
                   : "Select a task and timeblock to begin"
                 }
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
               <div>
                 <label className="text-sm font-medium mb-2 block">Select Task</label>
                 <Select
@@ -144,18 +144,18 @@ const Timer = () => {
                     }
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="touch-manipulation h-11">
                     <SelectValue placeholder="Choose a task" />
                   </SelectTrigger>
                   <SelectContent>
                     {tasks.map(task => (
-                      <SelectItem key={task.id} value={task.id}>
+                      <SelectItem key={task.id} value={task.id} className="py-3 touch-manipulation">
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-3 h-3 rounded-full"
+                            className="w-3 h-3 rounded-full flex-shrink-0"
                             style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
                           />
-                          {task.title}
+                          <span className="truncate text-sm sm:text-base">{task.title}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -166,19 +166,19 @@ const Timer = () => {
               {!isFromToday && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">Select Timeblock</label>
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     {timeblocks.map(block => (
                       <button
                         key={block.id}
                         onClick={() => setSelectedTimeblock(block)}
-                        className={`p-4 rounded-lg border-2 transition-all ${
+                        className={`p-3 sm:p-4 rounded-lg border-2 transition-all touch-manipulation ${
                           selectedTimeblock?.id === block.id
                             ? 'border-primary bg-primary/10'
                             : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <Clock className="w-5 h-5 mx-auto mb-1" />
-                        <p className="text-sm font-medium">{block.label}</p>
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1" />
+                        <p className="text-xs sm:text-sm font-medium">{block.label}</p>
                       </button>
                     ))}
                   </div>
@@ -186,15 +186,15 @@ const Timer = () => {
               )}
 
               {isFromToday && todayPlan && (
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="p-3 sm:p-4 rounded-lg bg-primary/10 border border-primary/20">
                   <div className="flex items-center justify-center gap-2 mb-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    <span className="font-medium">Today's Timeblock Duration</span>
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                    <span className="font-medium text-sm sm:text-base">Today's Timeblock Duration</span>
                   </div>
-                  <p className="text-center text-2xl font-bold text-primary">
+                  <p className="text-center text-xl sm:text-2xl font-bold text-primary">
                     {todayPlan.timeblockDuration} minutes
                   </p>
-                  <p className="text-center text-sm text-muted-foreground mt-1">
+                  <p className="text-center text-xs sm:text-sm text-muted-foreground mt-1">
                     Set in your daily plan
                   </p>
                 </div>

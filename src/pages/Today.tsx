@@ -234,27 +234,28 @@ const Today = () => {
   const remainingBlocks = todayPlan ? todayPlan.targetTimeblocks - totalAssignedBlocks : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6">
-      <div className="container mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6">
+      <div className="container mx-auto max-w-6xl space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Today's Plan
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               {format(new Date(), 'EEEE, MMMM d, yyyy')}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
                   variant="outline"
-                  className="gap-2"
+                  size="sm"
+                  className="gap-2 flex-1 sm:flex-none touch-manipulation"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  Clear Today
+                  <span className="sm:inline">Clear Today</span>
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -280,11 +281,12 @@ const Today = () => {
             <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
               <DialogTrigger asChild>
                 <Button 
-                  className="gap-2 shadow-lg shadow-primary/20"
+                  size="sm"
+                  className="gap-2 shadow-lg shadow-primary/20 flex-1 sm:flex-none touch-manipulation"
                   onClick={handleOpenGoalDialog}
                 >
                   <Target className="w-4 h-4" />
-                  Set Goal
+                  <span className="sm:inline">Set Goal</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -342,32 +344,32 @@ const Today = () => {
 
         {/* Progress Card */}
         <Card className="shadow-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Target className="w-5 h-5 text-primary" />
               Daily Progress
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 rounded-lg bg-background/50">
-                <p className="text-sm text-muted-foreground">Goal</p>
-                <p className="text-3xl font-bold text-primary">{todayPlan?.targetTimeblocks || 0}</p>
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-background/50">
+                <p className="text-xs sm:text-sm text-muted-foreground">Goal</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary">{todayPlan?.targetTimeblocks || 0}</p>
                 <p className="text-xs text-muted-foreground">× {timeblockDuration}m</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-background/50">
-                <p className="text-sm text-muted-foreground">Assigned</p>
-                <p className="text-3xl font-bold text-secondary">{totalAssignedBlocks}</p>
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-background/50">
+                <p className="text-xs sm:text-sm text-muted-foreground">Assigned</p>
+                <p className="text-2xl sm:text-3xl font-bold text-secondary">{totalAssignedBlocks}</p>
                 <p className="text-xs text-muted-foreground">blocks</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-background/50">
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-3xl font-bold text-accent">{todayPlan?.completedTimeblocks || 0}</p>
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-background/50">
+                <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl sm:text-3xl font-bold text-accent">{todayPlan?.completedTimeblocks || 0}</p>
                 <p className="text-xs text-muted-foreground">blocks</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-background/50">
-                <p className="text-sm text-muted-foreground">Remaining</p>
-                <p className="text-3xl font-bold text-muted-foreground">{Math.max(0, remainingBlocks)}</p>
+              <div className="text-center p-3 sm:p-4 rounded-lg bg-background/50">
+                <p className="text-xs sm:text-sm text-muted-foreground">Remaining</p>
+                <p className="text-2xl sm:text-3xl font-bold text-muted-foreground">{Math.max(0, remainingBlocks)}</p>
                 <p className="text-xs text-muted-foreground">blocks</p>
               </div>
             </div>
@@ -383,20 +385,20 @@ const Today = () => {
 
         {/* Today's Tasks */}
         <Card className="shadow-lg">
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <CalendarIcon className="w-5 h-5" />
                   Today's To-Do List
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'} planned
                 </CardDescription>
               </div>
               <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
+                  <Button size="sm" className="gap-2 w-full sm:w-auto touch-manipulation">
                     <Plus className="w-4 h-4" />
                     Add Task
                   </Button>
@@ -451,15 +453,15 @@ const Today = () => {
               </Dialog>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {todayTasks.length === 0 ? (
-              <div className="text-center py-12">
-                <CalendarIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-lg font-medium mb-2">No tasks planned for today</p>
-                <p className="text-muted-foreground mb-4">
+              <div className="text-center py-8 sm:py-12">
+                <CalendarIcon className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-base sm:text-lg font-medium mb-2">No tasks planned for today</p>
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">
                   Add tasks from your workplans to get started
                 </p>
-                <Button onClick={() => setIsAddTaskDialogOpen(true)} className="gap-2">
+                <Button size="sm" onClick={() => setIsAddTaskDialogOpen(true)} className="gap-2 touch-manipulation">
                   <Plus className="w-4 h-4" />
                   Add Your First Task
                 </Button>
@@ -479,7 +481,7 @@ const Today = () => {
                   return (
                     <div
                       key={todayTask.id}
-                      className={`group flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                      className={`group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border-2 transition-all ${
                         isTaskFullyCompleted
                           ? 'bg-primary/5 border-primary/50'
                           : todayTask.completed
@@ -487,83 +489,84 @@ const Today = () => {
                           : 'bg-card border-border hover:shadow-lg hover:border-primary/30'
                       }`}
                     >
-                      {/* Complete Button */}
-                      <button
-                        onClick={() => handleToggleComplete(todayTask.id)}
-                        className="flex-shrink-0"
-                      >
-                        {isTaskFullyCompleted || todayTask.completed ? (
-                          <CheckCircle2 className="w-6 h-6 text-primary" />
-                        ) : (
-                          <Circle className="w-6 h-6 text-muted-foreground hover:text-primary transition-colors" />
-                        )}
-                      </button>
-
-                      {/* Task Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
-                          />
-                          <h3 className={`font-semibold ${isTaskFullyCompleted ? 'line-through text-primary' : todayTask.completed ? 'line-through' : ''}`}>
-                            {task.title}
-                          </h3>
-                          {isTaskFullyCompleted && (
-                            <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-medium">
-                              ALL DONE
-                            </span>
+                      {/* Complete Button & Task Info */}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <button
+                          onClick={() => handleToggleComplete(todayTask.id)}
+                          className="flex-shrink-0 mt-1 touch-target"
+                        >
+                          {isTaskFullyCompleted || todayTask.completed ? (
+                            <CheckCircle2 className="w-6 h-6 text-primary" />
+                          ) : (
+                            <Circle className="w-6 h-6 text-muted-foreground hover:text-primary transition-colors" />
                           )}
-                        </div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span
-                            className="text-xs px-2 py-1 rounded-full font-medium"
-                            style={{
-                              backgroundColor: getPriorityColor(task.priorityQuadrant) + '20',
-                              color: getPriorityColor(task.priorityQuadrant),
-                            }}
-                          >
-                            {getPriorityLabel(task.priorityQuadrant)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {todayTask.timeblockCount} blocks × {timeblockDuration ?? 25} min
-                          </span>
-                          <span className="text-xs font-medium text-primary">
-                            = {totalMinutes} min total
-                          </span>
-                          
-                          {/* Timeblock Progress */}
-                          <div className="flex items-center gap-2">
-                            {completedBlocks > 0 && (
-                              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">
-                                ✓ {completedBlocks}/{todayTask.timeblockCount} completed
-                              </span>
-                            )}
-                            {remainingBlocksForTask > 0 && (
-                              <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-1 rounded">
-                                ⏱ {remainingBlocksForTask} remaining
-                              </span>
-                            )}
-                            {remainingBlocksForTask === 0 && completedBlocks === 0 && (
-                              <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                                {todayTask.timeblockCount} blocks to do
+                        </button>
+
+                        {/* Task Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
+                            />
+                            <h3 className={`font-semibold text-sm sm:text-base ${isTaskFullyCompleted ? 'line-through text-primary' : todayTask.completed ? 'line-through' : ''}`}>
+                              {task.title}
+                            </h3>
+                            {isTaskFullyCompleted && (
+                              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-medium">
+                                ALL DONE
                               </span>
                             )}
                           </div>
-                          
-                          {totalProductiveTime > 0 && (
-                            <span className="text-xs text-blue-600 font-medium">
-                              📊 {formatTimeHMS(totalProductiveTime)} worked
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            <span
+                              className="px-2 py-1 rounded-full font-medium whitespace-nowrap"
+                              style={{
+                                backgroundColor: getPriorityColor(task.priorityQuadrant) + '20',
+                                color: getPriorityColor(task.priorityQuadrant),
+                              }}
+                            >
+                              {getPriorityLabel(task.priorityQuadrant)}
                             </span>
-                          )}
+                            <span className="text-muted-foreground whitespace-nowrap">
+                              {todayTask.timeblockCount} blocks × {timeblockDuration ?? 25} min
+                            </span>
+                            <span className="font-medium text-primary whitespace-nowrap">
+                              = {totalMinutes} min
+                            </span>
+                          </div>
+                          
+                          {/* Timeblock Progress */}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {completedBlocks > 0 && (
+                              <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded whitespace-nowrap">
+                                ✓ {completedBlocks}/{todayTask.timeblockCount}
+                              </span>
+                            )}
+                            {remainingBlocksForTask > 0 && (
+                              <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-1 rounded whitespace-nowrap">
+                                ⏱ {remainingBlocksForTask} left
+                              </span>
+                            )}
+                            {remainingBlocksForTask === 0 && completedBlocks === 0 && (
+                              <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded whitespace-nowrap">
+                                {todayTask.timeblockCount} to do
+                              </span>
+                            )}
+                            {totalProductiveTime > 0 && (
+                              <span className="text-xs text-blue-600 font-medium whitespace-nowrap">
+                                📊 {formatTimeHMS(totalProductiveTime)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 sm:flex-shrink-0 ml-9 sm:ml-0">
                         {!todayTask.completed && (
-                          <Link to={`/timer?taskId=${task.id}`}>
-                            <Button size="sm" className="gap-2">
+                          <Link to={`/timer?taskId=${task.id}`} className="flex-1 sm:flex-none">
+                            <Button size="sm" className="gap-2 w-full sm:w-auto touch-manipulation">
                               <Play className="w-4 h-4" />
                               Start
                             </Button>
@@ -573,7 +576,7 @@ const Today = () => {
                           size="sm"
                           variant="ghost"
                           onClick={() => handleRemoveTask(todayTask.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity touch-target"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

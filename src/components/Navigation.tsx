@@ -44,25 +44,27 @@ const Navigation = () => {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b shadow-sm">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
+    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b shadow-sm safe-top">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex items-center justify-between h-14 sm:h-16">
+          {/* Logo - Smaller on mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <div className="relative">
-              <Clock className="w-6 h-6 text-primary" />
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               <div className="absolute -inset-1 bg-primary/20 blur-lg -z-10 animate-pulse" />
             </div>
-            <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span className="font-bold text-base sm:text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               TimeMaster
             </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-1">
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-1">
             {navItems.map(item => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
                 activeClassName="text-primary bg-primary/10 font-medium"
               >
                 <item.icon className="w-4 h-4" />
@@ -104,7 +106,7 @@ const Navigation = () => {
                       {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden lg:inline-block text-sm font-medium">
+                  <span className="hidden xl:inline-block text-sm font-medium">
                     {user?.name || 'User'}
                   </span>
                 </Button>
@@ -127,49 +129,25 @@ const Navigation = () => {
             </DropdownMenu>
           </div>
 
-          {/* Mobile Navigation */}
-          <div className="md:hidden flex items-center gap-1">
+          {/* Mobile Navigation - Icon only for space efficiency */}
+          <div className="lg:hidden flex items-center gap-0.5 sm:gap-1">
             {navItems.map(item => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                className="p-1.5 sm:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all touch-manipulation"
                 activeClassName="text-primary bg-primary/10"
               >
-                <item.icon className="w-5 h-5" />
+                <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="sr-only">{item.label}</span>
               </NavLink>
             ))}
             
-            {/* Mobile Theme Toggle */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  <span className="sr-only">Toggle theme</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTheme('light')}>
-                  <Sun className="mr-2 h-4 w-4" />
-                  <span>Light</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme('dark')}>
-                  <Moon className="mr-2 h-4 w-4" />
-                  <span>Dark</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme('system')}>
-                  <Monitor className="mr-2 h-4 w-4" />
-                  <span>System</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             {/* Mobile User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Avatar className="w-8 h-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+                  <Avatar className="w-6 h-6 sm:w-7 sm:h-7">
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
                       {getUserInitials()}
                     </AvatarFallback>
@@ -186,6 +164,22 @@ const Navigation = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                
+                {/* Theme options in mobile menu */}
+                <DropdownMenuItem onClick={() => setTheme('light')}>
+                  <Sun className="mr-2 h-4 w-4" />
+                  <span>Light Mode</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('dark')}>
+                  <Moon className="mr-2 h-4 w-4" />
+                  <span>Dark Mode</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('system')}>
+                  <Monitor className="mr-2 h-4 w-4" />
+                  <span>System</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

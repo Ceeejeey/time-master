@@ -43,9 +43,9 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <DataProvider>
-                      <div className="min-h-screen flex flex-col">
+                      <div className="min-h-screen flex flex-col safe-top safe-bottom">
                         <Navigation />
-                        <main className="flex-1">
+                        <main className="flex-1 overflow-x-hidden">
                           <Routes>
                             <Route path="/" element={<Index />} />
                             <Route path="/today" element={<Today />} />

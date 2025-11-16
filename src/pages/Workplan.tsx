@@ -129,18 +129,18 @@ const Workplan = () => {
     : tasks; // Show ALL tasks when no workplan is selected
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
-      <div className="container mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6">
+      <div className="container mx-auto max-w-7xl space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Workplans
             </h1>
-            <p className="text-muted-foreground">Organize your tasks and schedule</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Organize your tasks and schedule</p>
           </div>
           <Dialog open={isWorkplanDialogOpen} onOpenChange={setIsWorkplanDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
+              <Button size="sm" className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all w-full sm:w-auto touch-manipulation">
                 <Plus className="w-4 h-4" />
                 New Workplan
               </Button>
@@ -193,34 +193,34 @@ const Workplan = () => {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Workplans List */}
           <Card className="lg:col-span-1 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Calendar className="w-5 h-5" />
                 Your Workplans
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2 p-4 sm:p-6">
               {workplans.map((plan, index) => (
                 <button
                   key={plan.id || `workplan-${index}`}
                   onClick={() => setSelectedWorkplan(plan)}
-                  className={`w-full text-left p-3 rounded-lg transition-all ${
+                  className={`w-full text-left p-3 rounded-lg transition-all touch-manipulation ${
                     selectedWorkplan?.id === plan.id
                       ? 'bg-primary text-primary-foreground shadow-md scale-105'
                       : 'bg-muted hover:bg-muted/80 hover:shadow'
                   }`}
                 >
-                  <p className="font-medium">{plan.title}</p>
-                  <p className="text-sm opacity-80">
+                  <p className="font-medium text-sm sm:text-base">{plan.title}</p>
+                  <p className="text-xs sm:text-sm opacity-80">
                     {plan.scope} • {format(new Date(plan.startDate), 'MMM d')}
                   </p>
                 </button>
               ))}
               {workplans.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-8">
+                <p className="text-xs sm:text-sm text-muted-foreground text-center py-6 sm:py-8">
                   No workplans yet. Create one to get started!
                 </p>
               )}
@@ -230,24 +230,24 @@ const Workplan = () => {
           {/* Tasks */}
           <div className="lg:col-span-3">
             <Card className="shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex-1">
-                    <CardTitle className="text-2xl">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-xl sm:text-2xl truncate">
                       {selectedWorkplan ? selectedWorkplan.title : 'Select a Workplan'}
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       {selectedWorkplan ? `${workplanTasks.length} tasks` : 'Choose a workplan to view tasks'}
                     </CardDescription>
                   </div>
                   {selectedWorkplan && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                       {/* View Mode Toggle */}
-                      <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                      <div className="flex items-center gap-1 bg-muted p-1 rounded-lg flex-1 sm:flex-none">
                         <Button
                           size="sm"
                           variant={viewMode === 'matrix' ? 'default' : 'ghost'}
-                          className="gap-2 h-8"
+                          className="gap-1 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation"
                           onClick={() => setViewMode('matrix')}
                         >
                           <Grid3x3 className="w-4 h-4" />
@@ -256,7 +256,7 @@ const Workplan = () => {
                         <Button
                           size="sm"
                           variant={viewMode === 'list' ? 'default' : 'ghost'}
-                          className="gap-2 h-8"
+                          className="gap-1 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation"
                           onClick={() => setViewMode('list')}
                         >
                           <List className="w-4 h-4" />
@@ -266,9 +266,9 @@ const Workplan = () => {
 
                       <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button size="sm" className="gap-2 shadow-md">
+                          <Button size="sm" className="gap-2 shadow-md flex-1 sm:flex-none touch-manipulation">
                             <Plus className="w-4 h-4" />
-                            Add Task
+                            <span className="sm:inline">Add Task</span>
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -334,7 +334,7 @@ const Workplan = () => {
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6">
                 {selectedWorkplan ? (
                   viewMode === 'matrix' ? (
                     <EisenhowerMatrix
@@ -347,19 +347,19 @@ const Workplan = () => {
                       {workplanTasks.map(task => (
                         <div
                           key={task.id}
-                          className="flex items-center justify-between p-4 rounded-lg border bg-card hover:shadow-md transition-all group"
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-all group"
                         >
-                          <div className="flex items-center gap-3 flex-1">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
                             <div
-                              className="w-4 h-4 rounded-full flex-shrink-0"
+                              className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5"
                               style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
                             />
-                            <div className="flex-1">
-                              <p className="font-medium">{task.title}</p>
-                              <p className="text-sm text-muted-foreground">{task.description}</p>
-                              <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm sm:text-base truncate">{task.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{task.description}</p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 <span
-                                  className="text-xs px-2 py-1 rounded-full font-medium"
+                                  className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap"
                                   style={{
                                     backgroundColor: getPriorityColor(task.priorityQuadrant) + '20',
                                     color: getPriorityColor(task.priorityQuadrant),
@@ -367,17 +367,18 @@ const Workplan = () => {
                                 >
                                   {getPriorityLabel(task.priorityQuadrant)}
                                 </span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
                                   {task.estimatedTotalTimeMinutes} min
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 ml-7 sm:ml-0">
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEditTask(task)}
+                              className="touch-target"
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
@@ -385,6 +386,7 @@ const Workplan = () => {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDeleteTask(task.id)}
+                              className="touch-target"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -392,16 +394,16 @@ const Workplan = () => {
                         </div>
                       ))}
                       {workplanTasks.length === 0 && (
-                        <p className="text-center text-muted-foreground py-8">
+                        <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
                           No tasks yet. Add your first task!
                         </p>
                       )}
                     </div>
                   )
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Select a workplan to view and manage tasks</p>
+                  <div className="text-center py-8 sm:py-12 text-muted-foreground">
+                    <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm sm:text-base">Select a workplan to view and manage tasks</p>
                   </div>
                 )}
               </CardContent>

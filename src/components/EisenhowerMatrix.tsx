@@ -36,20 +36,20 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
     textColor: string;
   }) => (
     <div 
-      className="rounded-xl border-2 p-4 min-h-[300px] transition-all hover:shadow-lg"
+      className="rounded-xl border-2 p-3 sm:p-4 min-h-[250px] sm:min-h-[300px] transition-all hover:shadow-lg"
       style={{ 
         borderColor: bgColor,
         backgroundColor: `${bgColor}10`
       }}
     >
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <h3 
-          className="text-lg font-bold mb-1"
+          className="text-base sm:text-lg font-bold mb-1"
           style={{ color: textColor }}
         >
           {title}
         </h3>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground">{subtitle}</p>
         <div className="mt-2 flex items-center gap-2">
           <div 
             className="h-1 w-full rounded-full"
@@ -65,15 +65,15 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
         {tasks.map(task => (
           <div
             key={task.id}
-            className="group relative rounded-lg border bg-card p-3 transition-all hover:shadow-md"
+            className="group relative rounded-lg border bg-card p-2 sm:p-3 transition-all hover:shadow-md"
           >
             <div className="flex items-start gap-2">
               <div
                 className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
                 style={{ backgroundColor: bgColor }}
               />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm leading-tight mb-1">{task.title}</p>
+              <div className="flex-1 min-w-0 pr-20 sm:pr-0">
+                <p className="font-medium text-xs sm:text-sm leading-tight mb-1">{task.title}</p>
                 {task.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                     {task.description}
@@ -81,7 +81,7 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
                 )}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span 
-                    className="text-xs px-2 py-0.5 rounded-full font-medium"
+                    className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
                     style={{
                       backgroundColor: `${bgColor}20`,
                       color: textColor
@@ -93,13 +93,13 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
               </div>
             </div>
 
-            {/* Action buttons - shown on hover */}
-            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Action buttons - always visible on mobile, hover on desktop */}
+            <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <Link to={`/timer?taskId=${task.id}`}>
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="h-7 w-7 p-0"
+                  className="h-7 w-7 p-0 touch-target"
                   title="Start timer"
                 >
                   <Play className="w-3 h-3" />
@@ -108,7 +108,7 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
               <Button 
                 size="sm" 
                 variant="ghost" 
-                className="h-7 w-7 p-0"
+                className="h-7 w-7 p-0 touch-target"
                 onClick={() => onEditTask(task)}
                 title="Edit task"
               >
@@ -117,7 +117,7 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
               <Button 
                 size="sm" 
                 variant="ghost" 
-                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                className="h-7 w-7 p-0 text-destructive hover:text-destructive touch-target"
                 onClick={() => onDeleteTask(task.id)}
                 title="Delete task"
               >
@@ -127,7 +127,7 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
           </div>
         ))}
         {tasks.length === 0 && (
-          <div className="text-center py-8 text-sm text-muted-foreground">
+          <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-muted-foreground">
             No tasks in this quadrant
           </div>
         )}
@@ -137,15 +137,15 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
 
   return (
     <div className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-2">Eisenhower Matrix</h2>
-        <p className="text-sm text-muted-foreground">
+      <div className="text-center mb-4 sm:mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold mb-2">Eisenhower Matrix</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Prioritize your tasks based on urgency and importance
         </p>
       </div>
 
       {/* Matrix Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         {/* Quadrant 1: Essential & Immediate (DO FIRST) */}
         <QuadrantCard
           key="essential_immediate"

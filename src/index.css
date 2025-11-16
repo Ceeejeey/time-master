@@ -6,6 +6,28 @@
 All colors MUST be HSL.
 */
 
+/* Mobile-first safe area insets for Capacitor/APK */
+@supports (padding: env(safe-area-inset-top)) {
+  html {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Prevent overscroll bounce on mobile */
+html, body {
+  overscroll-behavior-y: none;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Improve touch targets for mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
