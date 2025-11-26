@@ -119,6 +119,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating Google OAuth, isNative:', isNative);
       
       if (isNative) {
+        // Set flag BEFORE opening browser so AuthContext knows to wait
+        sessionStorage.setItem('oauth_success_pending', 'true');
+        sessionStorage.setItem('oauth_success_timestamp', Date.now().toString());
+        console.log('🔐 OAuth pending flag set, opening browser...');
+        
         // For mobile: Use deep link that will redirect back to app
         const successUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=true';
         const failureUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=false';
@@ -141,6 +146,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Google login error:', error);
+      // Clear flag on error
+      if (Capacitor.isNativePlatform()) {
+        sessionStorage.removeItem('oauth_success_pending');
+        sessionStorage.removeItem('oauth_success_timestamp');
+      }
       throw error;
     }
   };
@@ -152,6 +162,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating GitHub OAuth, isNative:', isNative);
       
       if (isNative) {
+        // Set flag BEFORE opening browser so AuthContext knows to wait
+        sessionStorage.setItem('oauth_success_pending', 'true');
+        sessionStorage.setItem('oauth_success_timestamp', Date.now().toString());
+        console.log('🔐 OAuth pending flag set, opening browser...');
+        
         // For mobile: Use deep link that will redirect back to app
         const successUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=true';
         const failureUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=false';
@@ -174,6 +189,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('GitHub login error:', error);
+      // Clear flag on error
+      if (Capacitor.isNativePlatform()) {
+        sessionStorage.removeItem('oauth_success_pending');
+        sessionStorage.removeItem('oauth_success_timestamp');
+      }
       throw error;
     }
   };

@@ -18,18 +18,13 @@ if (Capacitor.isNativePlatform()) {
     try {
       // Handle OAuth success/failure
       if (event.url.includes('timemaster://auth/success')) {
-        console.log('✅ OAuth SUCCESS - Session should be created');
-        
-        // Store flag to trigger auth refresh AND target path
-        sessionStorage.setItem('oauth_success_pending', 'true');
-        sessionStorage.setItem('oauth_redirect_to', '/');
-        sessionStorage.setItem('oauth_success_timestamp', Date.now().toString());
-        
-        // Don't navigate yet - let AuthContext handle it after refresh
-        console.log('Flag set, app will check on next render');
+        console.log('✅ OAuth SUCCESS deep link - Flag already set, app will handle it');
+        // Flag was already set in loginWithGoogle/loginWithGithub
+        // AuthContext OAuth check will handle the rest
       } else if (event.url.includes('timemaster://auth/failure')) {
         console.log('❌ OAuth FAILED - Redirecting to login');
-        sessionStorage.setItem('oauth_failure', 'true');
+        sessionStorage.removeItem('oauth_success_pending');
+        sessionStorage.removeItem('oauth_success_timestamp');
         window.location.href = '/login?error=oauth_failed';
       } else {
         console.log('Unknown deep link, ignoring');
