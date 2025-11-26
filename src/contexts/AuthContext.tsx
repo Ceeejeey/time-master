@@ -23,6 +23,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkUser();
   }, []);
 
+  // Check for OAuth success from deep link
+  useEffect(() => {
+    const isNative = Capacitor.isNativePlatform();
+    if (!isNative) return;
+
+    const checkOAuthSuccess = async () => {
+      const oauthPending = sessionStorage.getItem('oauth_success_pending');
+      const timestamp = sessionStorage.getItem('oauth_success_timestamp');
+      
+      if (oauthPending === 'true' && timestamp) {
+        console.log('🔄 OAuth success detected, refreshing user...');
+        
+        // Clear the flags
+        sessionStorage.removeItem('oauth_success_pending');
+        sessionStorage.removeItem('oauth_success_timestamp');
+        
+        // Wait a moment for session to be fully established
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Try to get user multiple times
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts) {
+          attempts++;
+          console.log(`Attempt ${attempts}/${maxAttempts} to get user session...`);
+          
+          try {
+            const currentUser = await account.get();
+            console.log('✅ User session retrieved:', currentUser.email);
+            setUser(currentUser);
+            setLoading(false);
+            return;
+          } catch (error) {
+            console.log(`Attempt ${attempts} failed, retrying...`);
+            if (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        }
+        
+        console.error('❌ Failed to get user session after all attempts');
+        setLoading(false);
+      }
+    };
+
+    checkOAuthSuccess();
+  }, []);
+
   const checkUser = async () => {
     try {
       const currentUser = await account.get();

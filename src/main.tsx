@@ -16,15 +16,15 @@ if (Capacitor.isNativePlatform()) {
     console.log('🔗 Deep link received:', event.url);
     
     try {
-      const url = new URL(event.url);
-      const path = url.pathname + url.search;
-      
-      console.log('Deep link path:', path);
-      
       // Handle OAuth success/failure
       if (event.url.includes('timemaster://auth/success')) {
-        console.log('✅ OAuth SUCCESS - Redirecting to home');
-        // Session already created by Appwrite, just navigate
+        console.log('✅ OAuth SUCCESS - Session should be created');
+        
+        // Store flag to trigger auth refresh
+        sessionStorage.setItem('oauth_success_pending', 'true');
+        sessionStorage.setItem('oauth_success_timestamp', Date.now().toString());
+        
+        // Navigate to home - AuthContext will detect the flag and refresh
         window.location.href = '/';
       } else if (event.url.includes('timemaster://auth/failure')) {
         console.log('❌ OAuth FAILED - Redirecting to login');
