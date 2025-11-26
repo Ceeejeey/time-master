@@ -52,22 +52,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating Google OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Use the custom domain callback
-        // This opens external browser, creates session, then redirects back
-        const successUrl = 'https://time-master-new.appwrite.network/auth/callback';
-        const failureUrl = 'https://time-master-new.appwrite.network/login';
+        // For mobile: Use Appwrite's default callback scheme (recommended approach)
+        // Appwrite will redirect to: appwrite-callback-[PROJECT_ID]://success
+        // This is automatically handled by the SDK and sets the session cookie
+        console.log('Using Appwrite default OAuth callback scheme...');
         
-        console.log('Opening OAuth with Appwrite...');
-        
-        // This will open external browser and create the session
         await account.createOAuth2Session(
-          'google',
-          successUrl,
-          failureUrl
+          'google'
+          // No success/failure URLs - let Appwrite use default scheme
         );
-        
-        // After OAuth completes in browser, user needs to return to app
-        // The session will be available via cookies
       } else {
         // For web: Regular callback
         const successUrl = `${window.location.origin}/auth/callback`;
@@ -92,16 +85,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating GitHub OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Use the custom domain callback
-        const successUrl = 'https://time-master-new.appwrite.network/auth/callback';
-        const failureUrl = 'https://time-master-new.appwrite.network/login';
-        
-        console.log('Opening OAuth with Appwrite...');
+        // For mobile: Use Appwrite's default callback scheme
+        console.log('Using Appwrite default OAuth callback scheme...');
         
         await account.createOAuth2Session(
-          'github',
-          successUrl,
-          failureUrl
+          'github'
+          // No success/failure URLs - let Appwrite use default scheme
         );
       } else {
         // For web: Regular callback
