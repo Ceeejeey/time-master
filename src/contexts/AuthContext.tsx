@@ -33,16 +33,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const timestamp = sessionStorage.getItem('oauth_success_timestamp');
       
       if (oauthPending === 'true' && timestamp) {
-        console.log('🔄 OAuth success detected, refreshing user...');
+        console.log('🔄 OAuth success detected from deep link, refreshing user...');
         
-        // Clear the flags
+        // Clear flags immediately
         sessionStorage.removeItem('oauth_success_pending');
+        sessionStorage.removeItem('oauth_redirect_to');
         sessionStorage.removeItem('oauth_success_timestamp');
         
-        // Wait a moment for session to be fully established
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Keep loading state while we fetch user
+        setLoading(true);
         
-        // Try to get user multiple times
+        // Wait a moment for session to be fully established on Appwrite backend
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Try to get user multiple times with retries
         let attempts = 0;
         const maxAttempts = 5;
         
@@ -55,9 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('✅ User session retrieved:', currentUser.email);
             setUser(currentUser);
             setLoading(false);
+            console.log('🎉 OAuth complete! Login page will auto-redirect to home.');
             return;
           } catch (error) {
-            console.log(`Attempt ${attempts} failed, retrying...`);
+            console.log(`Attempt ${attempts} failed, retrying in 1s...`);
             if (attempts < maxAttempts) {
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
