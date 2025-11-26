@@ -124,15 +124,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionStorage.setItem('oauth_success_timestamp', Date.now().toString());
         console.log('🔐 OAuth pending flag set, opening browser...');
         
-        // For mobile: Use deep link that will redirect back to app
-        const successUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=true';
-        const failureUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=false';
+        // For mobile: Use capacitor localhost URL for callback
+        const successUrl = 'https://localhost/auth/callback';
+        const failureUrl = 'https://localhost/login';
         
-        await account.createOAuth2Session(
-          'google',
-          successUrl,
-          failureUrl
-        );
+        // Get the OAuth URL from Appwrite
+        const oauthUrl = `https://sgp.cloud.appwrite.io/v1/account/sessions/oauth2/google?project=${import.meta.env.VITE_APPWRITE_PROJECT_ID}&success=${encodeURIComponent(successUrl)}&failure=${encodeURIComponent(failureUrl)}`;
+        
+        console.log('Opening OAuth in in-app browser:', oauthUrl);
+        
+        // Open in in-app browser (stays within app context, preserves cookies)
+        await Browser.open({ 
+          url: oauthUrl,
+          presentationStyle: 'popover',
+        });
+        
+        // Listen for browser to close
+        Browser.addListener('browserFinished', async () => {
+          console.log('Browser closed, checking session...');
+          
+          // Wait a moment then check for session
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            const currentUser = await account.get();
+            console.log('✅ User logged in:', currentUser.email);
+            setUser(currentUser);
+            setLoading(false);
+            sessionStorage.removeItem('oauth_success_pending');
+            sessionStorage.removeItem('oauth_success_timestamp');
+          } catch (error) {
+            console.error('No session found after OAuth');
+            sessionStorage.removeItem('oauth_success_pending');
+            sessionStorage.removeItem('oauth_success_timestamp');
+            setLoading(false);
+          }
+        });
       } else {
         // For web: Regular callback
         const successUrl = `${window.location.origin}/auth/callback`;
@@ -167,15 +194,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionStorage.setItem('oauth_success_timestamp', Date.now().toString());
         console.log('🔐 OAuth pending flag set, opening browser...');
         
-        // For mobile: Use deep link that will redirect back to app
-        const successUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=true';
-        const failureUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=false';
+        // For mobile: Use capacitor localhost URL for callback
+        const successUrl = 'https://localhost/auth/callback';
+        const failureUrl = 'https://localhost/login';
         
-        await account.createOAuth2Session(
-          'github',
-          successUrl,
-          failureUrl
-        );
+        // Get the OAuth URL from Appwrite
+        const oauthUrl = `https://sgp.cloud.appwrite.io/v1/account/sessions/oauth2/github?project=${import.meta.env.VITE_APPWRITE_PROJECT_ID}&success=${encodeURIComponent(successUrl)}&failure=${encodeURIComponent(failureUrl)}`;
+        
+        console.log('Opening OAuth in in-app browser:', oauthUrl);
+        
+        // Open in in-app browser (stays within app context, preserves cookies)
+        await Browser.open({ 
+          url: oauthUrl,
+          presentationStyle: 'popover',
+        });
+        
+        // Listen for browser to close
+        Browser.addListener('browserFinished', async () => {
+          console.log('Browser closed, checking session...');
+          
+          // Wait a moment then check for session
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            const currentUser = await account.get();
+            console.log('✅ User logged in:', currentUser.email);
+            setUser(currentUser);
+            setLoading(false);
+            sessionStorage.removeItem('oauth_success_pending');
+            sessionStorage.removeItem('oauth_success_timestamp');
+          } catch (error) {
+            console.error('No session found after OAuth');
+            sessionStorage.removeItem('oauth_success_pending');
+            sessionStorage.removeItem('oauth_success_timestamp');
+            setLoading(false);
+          }
+        });
       } else {
         // For web: Regular callback
         const successUrl = `${window.location.origin}/auth/callback`;
