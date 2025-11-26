@@ -20,6 +20,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const isNative = Capacitor.isNativePlatform();
+    
+    // For mobile: Check if OAuth is pending before doing normal check
+    if (isNative) {
+      const oauthPending = sessionStorage.getItem('oauth_success_pending');
+      if (oauthPending === 'true') {
+        console.log('⏳ OAuth pending, skipping initial checkUser - will wait for deep link');
+        // Don't call checkUser yet - let the OAuth success handler do it
+        return;
+      }
+    }
+    
+    // Normal startup: check if user is already logged in
     checkUser();
   }, []);
 
