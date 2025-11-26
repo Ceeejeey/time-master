@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { account } from '@/lib/appwrite';
 import { Models } from 'appwrite';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 interface AuthContextType {
   user: Models.User<Models.Preferences> | null;
@@ -45,12 +47,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     try {
-      console.log('Initiating Google OAuth with callback:', `${window.location.origin}/auth/callback`);
-      // Redirect to Google OAuth
+      // Detect if running in Capacitor (mobile app)
+      const isNative = Capacitor.isNativePlatform();
+      
+      console.log('Initiating Google OAuth, isNative:', isNative);
+      
+      if (isNative) {
+        // For mobile: Mark that we're doing mobile OAuth
+        sessionStorage.setItem('mobile_oauth_in_progress', 'true');
+        sessionStorage.setItem('mobile_oauth_provider', 'google');
+      }
+      
+      // Use web domain for callback (works for both web and mobile)
+      const successUrl = 'https://time-master-new.appwrite.network/auth/callback';
+      const failureUrl = 'https://time-master-new.appwrite.network/login';
+      
       await account.createOAuth2Session(
         'google',
-        `${window.location.origin}/auth/callback`,
-        `${window.location.origin}/login`
+        successUrl,
+        failureUrl
       );
     } catch (error) {
       console.error('Google login error:', error);
@@ -60,12 +75,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGithub = async () => {
     try {
-      console.log('Initiating GitHub OAuth with callback:', `${window.location.origin}/auth/callback`);
-      // Redirect to GitHub OAuth
+      // Detect if running in Capacitor (mobile app)
+      const isNative = Capacitor.isNativePlatform();
+      
+      console.log('Initiating GitHub OAuth, isNative:', isNative);
+      
+      if (isNative) {
+        // For mobile: Mark that we're doing mobile OAuth
+        sessionStorage.setItem('mobile_oauth_in_progress', 'true');
+        sessionStorage.setItem('mobile_oauth_provider', 'github');
+      }
+      
+      // Use web domain for callback (works for both web and mobile)
+      const successUrl = 'https://time-master-new.appwrite.network/auth/callback';
+      const failureUrl = 'https://time-master-new.appwrite.network/login';
+      
       await account.createOAuth2Session(
         'github',
-        `${window.location.origin}/auth/callback`,
-        `${window.location.origin}/login`
+        successUrl,
+        failureUrl
       );
     } catch (error) {
       console.error('GitHub login error:', error);

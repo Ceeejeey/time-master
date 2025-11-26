@@ -8,6 +8,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
+import MobileSuccess from "./pages/MobileSuccess";
+import MobileFailure from "./pages/MobileFailure";
 import Index from "./pages/Home";
 import Today from "./pages/Today";
 import Workplan from "./pages/Workplan";
@@ -36,6 +38,8 @@ const App = () => {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/mobile-success" element={<MobileSuccess />} />
+              <Route path="/auth/mobile-failure" element={<MobileFailure />} />
 
               {/* Protected Routes */}
               <Route

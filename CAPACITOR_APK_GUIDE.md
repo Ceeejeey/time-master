@@ -38,9 +38,13 @@ npm run build
 npx cap add android
 ```
 
-## Step 5: Configure Android App
+## Step 5: Customize capacitor.config.ts
 
-### Update `capacitor.config.ts` or `capacitor.config.json`:
+**Note**: This file is **auto-generated** by `npx cap init`. Don't create it manually!
+
+After `npx cap init` creates the basic file, customize it by adding these configurations:
+
+### Edit `capacitor.config.ts` (created in project root):
 
 ```typescript
 import { CapacitorConfig } from '@capacitor/cli';
