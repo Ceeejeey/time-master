@@ -22,19 +22,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Custom URL scheme for OAuth callback - works without domain verification -->
+            <!-- Custom URL scheme for OAuth callback -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 
-                <!-- Custom scheme for TimeMaster app -->
+                <!-- Catch timemaster://auth/success and timemaster://auth/failure -->
                 <data 
                     android:scheme="timemaster"
                     android:host="auth" />
             </intent-filter>
             
-            <!-- Appwrite default OAuth callback scheme -->
+            <!-- Appwrite default OAuth callback scheme (fallback) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

@@ -52,15 +52,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating Google OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Use Appwrite's default callback scheme (recommended approach)
-        // Appwrite will redirect to: appwrite-callback-[PROJECT_ID]://success
-        // This is automatically handled by the SDK and sets the session cookie
-        console.log('Using Appwrite default OAuth callback scheme...');
+        // For mobile: Use createOAuth2Token to get the login URL
+        // Then open it externally and handle the callback manually
+        const successUrl = 'timemaster://auth/success';
+        const failureUrl = 'timemaster://auth/failure';
         
-        await account.createOAuth2Session(
-          'google'
-          // No success/failure URLs - let Appwrite use default scheme
+        console.log('Creating OAuth2 token with custom scheme...');
+        
+        // Get the OAuth URL from Appwrite
+        const loginUrl = account.createOAuth2Token(
+          'google',
+          successUrl,
+          failureUrl
         );
+        
+        console.log('Opening OAuth URL in external browser:', loginUrl);
+        
+        // Open in external browser (not in-app)
+        await Browser.open({ 
+          url: loginUrl,
+          windowName: '_self'
+        });
+        
+        // The callback will be handled by the deep link listener in main.tsx
       } else {
         // For web: Regular callback
         const successUrl = `${window.location.origin}/auth/callback`;
@@ -85,13 +99,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating GitHub OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Use Appwrite's default callback scheme
-        console.log('Using Appwrite default OAuth callback scheme...');
+        // For mobile: Use createOAuth2Token to get the login URL
+        const successUrl = 'timemaster://auth/success';
+        const failureUrl = 'timemaster://auth/failure';
         
-        await account.createOAuth2Session(
-          'github'
-          // No success/failure URLs - let Appwrite use default scheme
+        console.log('Creating OAuth2 token with custom scheme...');
+        
+        const loginUrl = account.createOAuth2Token(
+          'github',
+          successUrl,
+          failureUrl
         );
+        
+        console.log('Opening OAuth URL in external browser:', loginUrl);
+        
+        await Browser.open({ 
+          url: loginUrl,
+          windowName: '_self'
+        });
       } else {
         // For web: Regular callback
         const successUrl = `${window.location.origin}/auth/callback`;

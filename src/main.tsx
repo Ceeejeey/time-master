@@ -17,47 +17,56 @@ if (Capacitor.isNativePlatform()) {
     console.log('🔗 Deep link received:', event.url);
     
     try {
-      // Handle both Appwrite default scheme and custom scheme
-      if (event.url.includes('appwrite-callback-690ec68b0024ca04c338') || 
-          event.url.includes('timemaster://auth/success')) {
-        console.log('✅ OAuth callback detected - Checking for session...');
+      // Handle OAuth success callback
+      if (event.url.includes('timemaster://auth/success') || 
+          event.url.includes('appwrite-callback-690ec68b0024ca04c338')) {
+        console.log('✅ OAuth success callback detected');
         
-        // Wait for session to be established
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Parse the URL to extract userId and secret
+        const url = new URL(event.url);
+        const userId = url.searchParams.get('userId');
+        const secret = url.searchParams.get('secret');
         
-        // Try to get session multiple times
-        let attempts = 0;
-        const maxAttempts = 5;
+        console.log('Extracted params:', { userId: userId ? 'present' : 'missing', secret: secret ? 'present' : 'missing' });
         
-        while (attempts < maxAttempts) {
-          attempts++;
-          console.log(`Attempt ${attempts}/${maxAttempts} to get session...`);
+        if (userId && secret) {
+          console.log('Creating Appwrite session with userId and secret...');
           
           try {
+            // Create the session using the userId and secret from OAuth callback
+            await account.createSession(userId, secret);
+            console.log('✅ Session created successfully');
+            
+            // Wait a moment for session to be established
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Verify by fetching user data
             const user = await account.get();
-            console.log('✅ Session found:', user.email);
+            console.log('✅ User authenticated:', user.email);
+            
+            // Navigate to home
             console.log('Navigating to home...');
             window.location.href = '/';
-            return;
-          } catch (error) {
-            console.log(`Attempt ${attempts} failed, retrying...`);
-            if (attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+          } catch (sessionError) {
+            console.error('❌ Failed to create session:', sessionError);
+            window.location.href = '/login?error=session_creation_failed';
           }
+        } else {
+          console.error('❌ Missing userId or secret in callback URL');
+          window.location.href = '/login?error=missing_oauth_params';
         }
-        
-        console.error('❌ No session found after all attempts');
-        window.location.href = '/login?error=oauth_session_failed';
-        
-      } else if (event.url.includes('timemaster://auth/failure')) {
+      } 
+      // Handle OAuth failure callback
+      else if (event.url.includes('timemaster://auth/failure')) {
         console.log('❌ OAuth FAILED');
         window.location.href = '/login?error=oauth_failed';
-      } else {
+      } 
+      else {
         console.log('Unknown deep link, ignoring');
       }
     } catch (error) {
-      console.error('Error parsing deep link:', error);
+      console.error('Error handling deep link:', error);
+      window.location.href = '/login?error=deep_link_error';
     }
   });
 }
