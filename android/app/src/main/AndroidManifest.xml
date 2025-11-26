@@ -22,26 +22,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Custom URL scheme for OAuth callback -->
+            <!-- Appwrite v2 Official OAuth Callback Scheme -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <!-- Catch timemaster://auth/success and timemaster://auth/failure -->
-                <data 
-                    android:scheme="timemaster"
-                    android:host="auth" />
-            </intent-filter>
-            
-            <!-- Appwrite default OAuth callback scheme (fallback) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                
-                <!-- Appwrite default scheme: appwrite-callback-[PROJECT_ID] -->
-                <data android:scheme="appwrite-callback-690ec68b0024ca04c338" />
+                <data android:scheme="appwrite-callback" />
             </intent-filter>
 
         </activity>

@@ -12,52 +12,33 @@ import { account } from "./lib/appwrite.js";
 if (Capacitor.isNativePlatform()) {
   console.log('=== Mobile Deep Link Handler Initialized ===');
   
-  // Listen for deep link events
+  // Listen for deep link events (Appwrite v2 Official Scheme)
   CapacitorApp.addListener('appUrlOpen', async (event) => {
     console.log('🔗 Deep link received:', event.url);
     
     try {
-      // Handle OAuth success callback
-      if (event.url.includes('timemaster://auth/success') || 
-          event.url.includes('appwrite-callback-690ec68b0024ca04c338')) {
-        console.log('✅ OAuth success callback detected');
+      // Handle OAuth success callback with Appwrite v2 official scheme
+      if (event.url.includes('appwrite-callback://success')) {
+        console.log('✅ OAuth success callback detected (Appwrite v2)');
         
-        // Parse the URL to extract userId and secret
-        const url = new URL(event.url);
-        const userId = url.searchParams.get('userId');
-        const secret = url.searchParams.get('secret');
+        // Small delay to ensure session cookie is ready
+        await new Promise(resolve => setTimeout(resolve, 1200));
         
-        console.log('Extracted params:', { userId: userId ? 'present' : 'missing', secret: secret ? 'present' : 'missing' });
-        
-        if (userId && secret) {
-          console.log('Creating Appwrite session with userId and secret...');
+        try {
+          // Session is automatically set by Appwrite - just fetch user
+          const user = await account.get();
+          console.log('✅ User authenticated:', user.email);
           
-          try {
-            // Create the session using the userId and secret from OAuth callback
-            await account.createSession(userId, secret);
-            console.log('✅ Session created successfully');
-            
-            // Wait a moment for session to be established
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Verify by fetching user data
-            const user = await account.get();
-            console.log('✅ User authenticated:', user.email);
-            
-            // Navigate to home
-            console.log('Navigating to home...');
-            window.location.href = '/';
-          } catch (sessionError) {
-            console.error('❌ Failed to create session:', sessionError);
-            window.location.href = '/login?error=session_creation_failed';
-          }
-        } else {
-          console.error('❌ Missing userId or secret in callback URL');
-          window.location.href = '/login?error=missing_oauth_params';
+          // Navigate to home
+          console.log('Navigating to home...');
+          window.location.href = '/';
+        } catch (sessionError) {
+          console.error('❌ Failed to retrieve session:', sessionError);
+          window.location.href = '/login?error=session_failed';
         }
       } 
       // Handle OAuth failure callback
-      else if (event.url.includes('timemaster://auth/failure')) {
+      else if (event.url.includes('appwrite-callback://failure')) {
         console.log('❌ OAuth FAILED');
         window.location.href = '/login?error=oauth_failed';
       } 

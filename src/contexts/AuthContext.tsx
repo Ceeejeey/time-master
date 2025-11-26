@@ -52,27 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating Google OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Use createOAuth2Token to get the login URL
-        // Then open it externally and handle the callback manually
-        const successUrl = 'timemaster://auth/success';
-        const failureUrl = 'timemaster://auth/failure';
+        // For mobile: Use Appwrite v2's official callback scheme
+        console.log('Using Appwrite v2 official callback scheme...');
         
-        console.log('Creating OAuth2 token with custom scheme...');
-        
-        // Get the OAuth URL from Appwrite
-        const loginUrl = account.createOAuth2Token(
+        await account.createOAuth2Session(
           'google',
-          successUrl,
-          failureUrl
+          'appwrite-callback://success',
+          'appwrite-callback://failure'
         );
-        
-        console.log('Opening OAuth URL in external browser:', loginUrl);
-        
-        // Open in external browser (not in-app)
-        await Browser.open({ 
-          url: loginUrl,
-          windowName: '_self'
-        });
         
         // The callback will be handled by the deep link listener in main.tsx
       } else {
@@ -99,24 +86,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initiating GitHub OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Use createOAuth2Token to get the login URL
-        const successUrl = 'timemaster://auth/success';
-        const failureUrl = 'timemaster://auth/failure';
+        // For mobile: Use Appwrite v2's official callback scheme
+        console.log('Using Appwrite v2 official callback scheme...');
         
-        console.log('Creating OAuth2 token with custom scheme...');
-        
-        const loginUrl = account.createOAuth2Token(
+        await account.createOAuth2Session(
           'github',
-          successUrl,
-          failureUrl
+          'appwrite-callback://success',
+          'appwrite-callback://failure'
         );
-        
-        console.log('Opening OAuth URL in external browser:', loginUrl);
-        
-        await Browser.open({ 
-          url: loginUrl,
-          windowName: '_self'
-        });
       } else {
         // For web: Regular callback
         const successUrl = `${window.location.origin}/auth/callback`;
