@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { account } from '@/lib/appwrite';
 import { Clock, CheckCircle } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -14,18 +15,30 @@ const AuthCallback = () => {
       try {
         // Check if this is a mobile OAuth callback viewed in browser
         const mobileOAuthInProgress = sessionStorage.getItem('mobile_oauth_in_progress');
-        const isBrowserView = window.location.hostname !== 'localhost' && !window.location.protocol.includes('capacitor');
+        const isCapacitorApp = window.location.protocol.includes('capacitor') || Capacitor.isNativePlatform();
         
-        if (mobileOAuthInProgress === 'true' && isBrowserView) {
-          // This is being viewed in browser after mobile OAuth
+        console.log('AuthCallback context:', { 
+          mobileOAuthInProgress, 
+          isCapacitorApp,
+          hostname: window.location.hostname,
+          protocol: window.location.protocol 
+        });
+        
+        if (mobileOAuthInProgress === 'true' && !isCapacitorApp) {
+          // This is being viewed in browser after mobile OAuth - show success page
           setIsMobileOAuth(true);
+          setIsChecking(false);
           
-          // Set success flag for app to detect
+          // Set success flag in BOTH storages (Android may not share sessionStorage between browser and app)
+          const timestamp = Date.now().toString();
           sessionStorage.setItem('mobile_oauth_success', 'true');
-          sessionStorage.setItem('mobile_oauth_timestamp', Date.now().toString());
+          sessionStorage.setItem('mobile_oauth_timestamp', timestamp);
+          localStorage.setItem('mobile_oauth_success', 'true');
+          localStorage.setItem('mobile_oauth_timestamp', timestamp);
           sessionStorage.removeItem('mobile_oauth_in_progress');
           
-          console.log('Mobile OAuth success - showing browser success page');
+          console.log('✅ Mobile OAuth SUCCESS - Set flags in both storages');
+          console.log('Timestamp:', timestamp);
           
           // Countdown timer
           const timer = setInterval(() => {
@@ -38,7 +51,6 @@ const AuthCallback = () => {
             });
           }, 1000);
 
-          setIsChecking(false);
           return () => clearInterval(timer);
         }
 
