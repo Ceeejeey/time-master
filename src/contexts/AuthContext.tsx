@@ -47,26 +47,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     try {
-      // Detect if running in Capacitor (mobile app)
       const isNative = Capacitor.isNativePlatform();
       
       console.log('Initiating Google OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Mark that we're doing mobile OAuth
-        sessionStorage.setItem('mobile_oauth_in_progress', 'true');
-        sessionStorage.setItem('mobile_oauth_provider', 'google');
+        // For mobile: Use deep link that will redirect back to app
+        const successUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=true';
+        const failureUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=false';
+        
+        await account.createOAuth2Session(
+          'google',
+          successUrl,
+          failureUrl
+        );
+      } else {
+        // For web: Regular callback
+        const successUrl = `${window.location.origin}/auth/callback`;
+        const failureUrl = `${window.location.origin}/login`;
+        
+        await account.createOAuth2Session(
+          'google',
+          successUrl,
+          failureUrl
+        );
       }
-      
-      // Use web domain for callback (works for both web and mobile)
-      const successUrl = 'https://time-master-new.appwrite.network/auth/callback';
-      const failureUrl = 'https://time-master-new.appwrite.network/login';
-      
-      await account.createOAuth2Session(
-        'google',
-        successUrl,
-        failureUrl
-      );
     } catch (error) {
       console.error('Google login error:', error);
       throw error;
@@ -75,26 +80,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGithub = async () => {
     try {
-      // Detect if running in Capacitor (mobile app)
       const isNative = Capacitor.isNativePlatform();
       
       console.log('Initiating GitHub OAuth, isNative:', isNative);
       
       if (isNative) {
-        // For mobile: Mark that we're doing mobile OAuth
-        sessionStorage.setItem('mobile_oauth_in_progress', 'true');
-        sessionStorage.setItem('mobile_oauth_provider', 'github');
+        // For mobile: Use deep link that will redirect back to app
+        const successUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=true';
+        const failureUrl = 'https://time-master-new.appwrite.network/auth/mobile-redirect?success=false';
+        
+        await account.createOAuth2Session(
+          'github',
+          successUrl,
+          failureUrl
+        );
+      } else {
+        // For web: Regular callback
+        const successUrl = `${window.location.origin}/auth/callback`;
+        const failureUrl = `${window.location.origin}/login`;
+        
+        await account.createOAuth2Session(
+          'github',
+          successUrl,
+          failureUrl
+        );
       }
-      
-      // Use web domain for callback (works for both web and mobile)
-      const successUrl = 'https://time-master-new.appwrite.network/auth/callback';
-      const failureUrl = 'https://time-master-new.appwrite.network/login';
-      
-      await account.createOAuth2Session(
-        'github',
-        successUrl,
-        failureUrl
-      );
     } catch (error) {
       console.error('GitHub login error:', error);
       throw error;

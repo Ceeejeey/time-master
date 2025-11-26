@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import MobileSuccess from "./pages/MobileSuccess";
 import MobileFailure from "./pages/MobileFailure";
+import MobileRedirect from "./pages/MobileRedirect";
 import Index from "./pages/Home";
 import Today from "./pages/Today";
 import Workplan from "./pages/Workplan";
@@ -40,6 +41,7 @@ const App = () => {
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/auth/mobile-success" element={<MobileSuccess />} />
               <Route path="/auth/mobile-failure" element={<MobileFailure />} />
+              <Route path="/auth/mobile-redirect" element={<MobileRedirect />} />
 
               {/* Protected Routes */}
               <Route
