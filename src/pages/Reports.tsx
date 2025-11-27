@@ -95,8 +95,8 @@ const Reports = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="container mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-background p-2 sm:p-4">
+      <div className="w-full max-w-full px-0 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Productivity Reports</h1>
@@ -185,19 +185,19 @@ const Reports = () => {
                 </div>
 
                 {/* Charts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
                   {/* Pie Chart */}
                   <Card className="border-2 border-primary/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-primary" />
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                         Time Distribution
                       </CardTitle>
-                      <CardDescription>How you spent your time</CardDescription>
+                      <CardDescription className="text-xs sm:text-sm">How you spent your time</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4 sm:p-6 pt-0">
                       {pieData.length > 0 && (pieData[0].value > 0 || pieData[1].value > 0) ? (
-                        <ResponsiveContainer width="100%" height={350}>
+                        <ResponsiveContainer width="100%" height={280}>
                           <PieChart>
                             <defs>
                               <linearGradient id="productiveGradient" x1="0" y1="0" x2="1" y2="1">
@@ -214,10 +214,11 @@ const Reports = () => {
                               cx="50%"
                               cy="50%"
                               labelLine={false}
-                              label={({ name, value, percent }) => 
-                                value > 0 ? `${name}: ${formatYAxisTime(value)} (${(percent * 100).toFixed(0)}%)` : ''
+                              label={({ percent }) => 
+                                percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
                               }
-                              outerRadius={120}
+                              outerRadius={90}
+                              innerRadius={50}
                               fill="#8884d8"
                               dataKey="value"
                               animationDuration={1000}
@@ -233,14 +234,15 @@ const Reports = () => {
                             <Legend 
                               verticalAlign="bottom" 
                               height={36}
-                              formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+                              iconType="circle"
+                              formatter={(value) => <span className="text-xs sm:text-sm font-medium">{value}</span>}
                             />
                           </PieChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground gap-2">
-                          <Clock className="w-12 h-12 opacity-20" />
-                          <p>No time data yet</p>
+                        <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                          <Clock className="w-10 h-10 sm:w-12 sm:h-12 opacity-20" />
+                          <p className="text-sm sm:text-base">No time data yet</p>
                           <p className="text-xs">Complete your first timeblock to see distribution</p>
                         </div>
                       )}
@@ -249,19 +251,19 @@ const Reports = () => {
 
                   {/* Bar Chart */}
                   <Card className="border-2 border-destructive/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-destructive" />
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
                         Top Wasted Time Tasks
                       </CardTitle>
-                      <CardDescription>Tasks that need more focus and attention</CardDescription>
+                      <CardDescription className="text-xs sm:text-sm">Tasks that need more focus and attention</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4 sm:p-6 pt-0">
                       {topWastedData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={350}>
+                        <ResponsiveContainer width="100%" height={280}>
                           <BarChart 
                             data={topWastedData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                            margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
                           >
                             <defs>
                               <linearGradient id="colorWasted" x1="0" y1="0" x2="0" y2="1">
@@ -274,29 +276,29 @@ const Reports = () => {
                               dataKey="name" 
                               angle={-45} 
                               textAnchor="end" 
-                              height={100}
-                              tick={{ fontSize: 12 }}
+                              height={80}
+                              tick={{ fontSize: 10 }}
                               stroke="hsl(var(--muted-foreground))"
                             />
                             <YAxis 
                               tickFormatter={formatYAxisTime}
-                              tick={{ fontSize: 12 }}
+                              tick={{ fontSize: 10 }}
                               stroke="hsl(var(--muted-foreground))"
-                              width={60}
+                              width={50}
                             />
                             <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
                             <Bar 
                               dataKey="seconds" 
                               fill="url(#colorWasted)"
-                              radius={[8, 8, 0, 0]}
+                              radius={[6, 6, 0, 0]}
                               animationDuration={1000}
                             />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground gap-2">
-                          <BarChart3 className="w-12 h-12 opacity-20" />
-                          <p>No wasted time data yet</p>
+                        <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+                          <BarChart3 className="w-10 h-10 sm:w-12 sm:h-12 opacity-20" />
+                          <p className="text-sm sm:text-base">No wasted time data yet</p>
                           <p className="text-xs">Start completing timeblocks to see insights</p>
                         </div>
                       )}

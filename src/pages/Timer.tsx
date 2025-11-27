@@ -91,8 +91,8 @@ const Timer = () => {
   const progress = getProgress();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6">
-      <div className="container mx-auto max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-2 sm:p-4">
+      <div className="w-full max-w-2xl mx-auto">
         <div className="text-center mb-4 sm:mb-6 md:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Focus Timer</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Stay focused and track your productivity</p>
