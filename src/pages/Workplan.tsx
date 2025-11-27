@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Calendar, Grid3x3, List } from 'lucide-react';
+import { Plus, Trash2, Edit2, Calendar, Grid3x3, List, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getTasks, getWorkplans, saveTask, saveWorkplan, deleteTask } from '@/lib/storage';
+import { getTasks, getWorkplans, saveTask, saveWorkplan, deleteTask, getCurrentUserId } from '@/lib/storage';
 import { Task, WorkplanScope, PriorityQuadrant } from '@/lib/types';
 import type { Workplan } from '@/lib/types';
 import { format } from 'date-fns';
@@ -23,6 +23,9 @@ const Workplan = () => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'matrix'>('matrix');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [startY, setStartY] = useState(0);
 
   const [workplanForm, setWorkplanForm] = useState({
     title: '',
@@ -42,17 +45,52 @@ const Workplan = () => {
   }, []);
 
   const loadData = async () => {
+    console.log('[Workplan] Loading workplans and tasks...');
     const [workplansData, tasksData] = await Promise.all([
       getWorkplans(),
       getTasks(),
     ]);
+    console.log('[Workplan] Loaded', workplansData.length, 'workplans and', tasksData.length, 'tasks');
     setWorkplans(workplansData);
     setTasks(tasksData);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      setStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (window.scrollY === 0 && startY > 0) {
+      const currentY = e.touches[0].clientY;
+      const distance = Math.max(0, Math.min(currentY - startY, 80));
+      setPullDistance(distance);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 60) {
+      await handleRefresh();
+    }
+    setStartY(0);
+    setPullDistance(0);
+  };
+
   const handleCreateWorkplan = async () => {
+    const userId = getCurrentUserId();
     const newWorkplan: Workplan = {
       id: `workplan-${Date.now()}`,
+      userId,
       title: workplanForm.title,
       scope: workplanForm.scope,
       startDate: workplanForm.startDate,
@@ -68,8 +106,10 @@ const Workplan = () => {
   };
 
   const handleCreateTask = async () => {
+    const userId = getCurrentUserId();
     const newTask: Task = {
       id: editingTask?.id || `task-${Date.now()}`,
+      userId,
       title: taskForm.title,
       description: taskForm.description,
       priorityQuadrant: taskForm.priorityQuadrant,
@@ -78,14 +118,21 @@ const Workplan = () => {
       metadata: {},
     };
 
-    await saveTask(newTask);
+    console.log('[Workplan] Saving task:', newTask.title, 'with temp ID:', newTask.id);
+    const savedTaskId = await saveTask(newTask);
+    console.log('[Workplan] Task saved with actual ID:', savedTaskId);
 
     if (selectedWorkplan && !editingTask) {
+      console.log('[Workplan] Adding task to workplan:', selectedWorkplan.title);
       const updatedWorkplan = {
         ...selectedWorkplan,
-        tasks: [...selectedWorkplan.tasks, newTask.id],
+        tasks: [...selectedWorkplan.tasks, savedTaskId],
       };
+      console.log('[Workplan] Updated workplan tasks:', updatedWorkplan.tasks);
       await saveWorkplan(updatedWorkplan);
+      
+      // Update local state immediately
+      setSelectedWorkplan(updatedWorkplan);
     }
 
     await loadData();
@@ -125,11 +172,49 @@ const Workplan = () => {
   };
 
   const workplanTasks = selectedWorkplan
-    ? tasks.filter(t => selectedWorkplan.tasks.includes(t.id))
+    ? tasks.filter(t => {
+        const isIncluded = selectedWorkplan.tasks.includes(t.id);
+        console.log('[Workplan] Task', t.id, t.title, 'included in workplan?', isIncluded);
+        return isIncluded;
+      })
     : tasks; // Show ALL tasks when no workplan is selected
+  
+  console.log('[Workplan] Selected workplan:', selectedWorkplan?.title, 'Task IDs:', selectedWorkplan?.tasks);
+  console.log('[Workplan] All tasks:', tasks.map(t => ({ id: t.id, title: t.title })));
+  console.log('[Workplan] Filtered workplan tasks:', workplanTasks.map(t => ({ id: t.id, title: t.title })));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to refresh indicator */}
+      {pullDistance > 0 && (
+        <div 
+          className="fixed top-14 left-0 right-0 flex justify-center z-50 transition-opacity"
+          style={{ 
+            opacity: pullDistance / 60,
+            transform: `translateY(${Math.min(pullDistance - 20, 40)}px)` 
+          }}
+        >
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <RefreshCw className={`w-4 h-4 ${pullDistance > 60 ? 'animate-spin' : ''}`} />
+            <span className="text-sm">{pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh'}</span>
+          </div>
+        </div>
+      )}
+      
+      {isRefreshing && (
+        <div className="fixed top-14 left-0 right-0 flex justify-center z-50">
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Refreshing...</span>
+          </div>
+        </div>
+      )}
+      
       <div className="container mx-auto max-w-7xl space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

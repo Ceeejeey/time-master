@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TimerSession, Task, Timeblock } from '@/lib/types';
-import { saveTimerSession, getTodayPlan, saveTodayPlan } from '@/lib/storage';
+import { saveTimerSession, getTodayPlan, saveTodayPlan, getCurrentUserId } from '@/lib/storage';
 import { calculateSessionStats, isSessionPaused, getTotalPauseTimeSeconds, isSessionRunning } from '@/lib/timer';
 import { toast } from '@/hooks/use-toast';
 import { formatTimeHMS } from '@/lib/utils';
@@ -38,8 +38,10 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
   const startTimer = useCallback(async () => {
     if (!task || !timeblock) return;
 
+    const userId = getCurrentUserId();
     const newSession: TimerSession = {
       id: `session-${Date.now()}`,
+      userId,
       taskId: task.id,
       timeblockId: timeblock.id,
       startTimestamp: new Date().toISOString(),

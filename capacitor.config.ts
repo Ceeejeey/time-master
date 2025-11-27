@@ -14,6 +14,13 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
     captureInput: true,
     webContentsDebuggingEnabled: true
+  },
+  
+  plugins: {
+    CapacitorSQLite: {
+      iosDatabaseLocation: 'Library/CapacitorDatabase',
+      androidDatabaseLocation: 'databases'
+    }
   }
   
   // Note: Plugin configurations commented out until plugins are installed

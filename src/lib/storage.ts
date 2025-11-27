@@ -1,34 +1,17 @@
-import { databases, DATABASE_ID, COLLECTIONS, ID, Query, account } from './appwrite.js';
-import { 
-  User, Workplan, Task, Timeblock, TimerSession, 
-  TodayPlan 
-} from './types';
+import { db } from '../database';
+import { User, Task, Workplan, Timeblock, TimerSession, TodayPlan } from './types';
 
-// Get current authenticated user ID
-export const getCurrentUserId = async (): Promise<string> => {
-  try {
-    const user = await account.get();
-    return user.$id;
-  } catch (error) {
-    throw new Error('User not authenticated');
-  }
-};
-
-// User
+// User Profile
 export const getUser = async (): Promise<User | null> => {
   try {
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.USER,
-      [Query.limit(1)]
-    );
-    
-    if (response.documents.length > 0) {
-      const doc = response.documents[0];
+    const result = await db.query('SELECT * FROM user_profile LIMIT 1');
+    if (result.values && result.values.length > 0) {
+      const row = result.values[0];
       return {
-        id: doc.$id,
-        name: doc.name,
-        isPremium: doc.isPremium,
+        id: row.id.toString(),
+        name: row.username,
+        email: '',
+        isPremium: false
       };
     }
     return null;
@@ -41,26 +24,15 @@ export const getUser = async (): Promise<User | null> => {
 export const saveUser = async (user: User): Promise<void> => {
   try {
     const existing = await getUser();
-    
     if (existing) {
-      await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.USER,
-        existing.id,
-        {
-          name: user.name,
-          isPremium: user.isPremium,
-        }
+      await db.run(
+        'UPDATE user_profile SET username = ? WHERE id = ?',
+        [user.name, existing.id]
       );
     } else {
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.USER,
-        user.id || ID.unique(),
-        {
-          name: user.name,
-          isPremium: user.isPremium,
-        }
+      await db.run(
+        'INSERT INTO user_profile (username, profilePic) VALUES (?, ?)',
+        [user.name, '']
       );
     }
   } catch (error) {
@@ -69,83 +41,11 @@ export const saveUser = async (user: User): Promise<void> => {
   }
 };
 
-// Workplans
-export const getWorkplans = async (): Promise<Workplan[]> => {
+export const saveProfilePicture = async (picturePath: string): Promise<void> => {
   try {
-    const userId = await getCurrentUserId();
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.WORKPLANS,
-      [Query.equal('userId', userId)]
-    );
-    
-    return response.documents.map(doc => ({
-      id: doc.$id,
-      userId: doc.userId,
-      title: doc.title,
-      scope: doc.scope,
-      startDate: doc.startDate,
-      endDate: doc.endDate,
-      tasks: Array.isArray(doc.tasks) ? doc.tasks : [],
-    }));
+    await db.run('UPDATE user_profile SET profilePic = ? WHERE id = 1', [picturePath]);
   } catch (error) {
-    console.error('Error getting workplans:', error);
-    return [];
-  }
-};
-
-export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
-  try {
-    const userId = await getCurrentUserId();
-    const existing = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.WORKPLANS,
-      [Query.equal('$id', workplan.id)]
-    );
-    
-    const data = {
-      userId: workplan.userId || userId,
-      title: workplan.title,
-      scope: workplan.scope,
-      startDate: workplan.startDate,
-      endDate: workplan.endDate,
-      tasks: workplan.tasks || [],
-    };
-    
-    if (existing.documents.length > 0) {
-      // Verify ownership
-      if (existing.documents[0].userId !== userId) {
-        throw new Error('Unauthorized to update this workplan');
-      }
-      await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.WORKPLANS,
-        workplan.id,
-        data
-      );
-    } else {
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.WORKPLANS,
-        workplan.id,
-        data
-      );
-    }
-  } catch (error) {
-    console.error('Error saving workplan:', error);
-    throw error;
-  }
-};
-
-export const deleteWorkplan = async (id: string): Promise<void> => {
-  try {
-    await databases.deleteDocument(
-      DATABASE_ID,
-      COLLECTIONS.WORKPLANS,
-      id
-    );
-  } catch (error) {
-    console.error('Error deleting workplan:', error);
+    console.error('Error saving profile picture:', error);
     throw error;
   }
 };
@@ -153,26 +53,18 @@ export const deleteWorkplan = async (id: string): Promise<void> => {
 // Tasks
 export const getTasks = async (): Promise<Task[]> => {
   try {
-    const userId = await getCurrentUserId();
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TASKS,
-      [Query.equal('userId', userId)]
-    );
+    const result = await db.query('SELECT * FROM tasks ORDER BY createdAt DESC');
+    if (!result.values) return [];
     
-    return response.documents.map(doc => ({
-      id: doc.$id,
-      userId: doc.userId,
-      title: doc.title,
-      description: doc.description,
-      priorityQuadrant: doc.priorityQuadrant,
-      assignedTimeblocks: Array.isArray(doc.assignedTimeblocks) 
-        ? doc.assignedTimeblocks 
-        : [],
-      estimatedTotalTimeMinutes: doc.estimatedTotalTimeMinutes || 0,
-      metadata: typeof doc.metadata === 'string' 
-        ? JSON.parse(doc.metadata) 
-        : (doc.metadata || {}),
+    return result.values.map((row: Record<string, unknown>) => ({
+      id: row.id.toString(),
+      userId: '1',
+      title: row.title as string,
+      description: row.description as string || '',
+      priorityQuadrant: row.priorityQuadrant as string || 'not_essential_not_immediate',
+      assignedTimeblocks: [],
+      estimatedTotalTimeMinutes: row.estimatedTotalTimeMinutes as number || 0,
+      metadata: row.metadata ? JSON.parse(row.metadata as string) : {}
     }));
   } catch (error) {
     console.error('Error getting tasks:', error);
@@ -180,78 +72,52 @@ export const getTasks = async (): Promise<Task[]> => {
   }
 };
 
-export const getTaskById = async (id: string): Promise<Task | null> => {
+export const saveTask = async (task: Task): Promise<string> => {
   try {
-    const userId = await getCurrentUserId();
-    const doc = await databases.getDocument(
-      DATABASE_ID,
-      COLLECTIONS.TASKS,
-      id
-    );
+    const metadata = JSON.stringify(task.metadata || {});
     
-    // Verify ownership
-    if (doc.userId !== userId) {
-      console.error('Unauthorized access to task');
-      return null;
-    }
+    // Check if task exists by querying the database
+    const existing = task.id ? await db.query('SELECT id FROM tasks WHERE id = ?', [task.id]) : null;
+    const taskExists = existing?.values && existing.values.length > 0;
     
-    return {
-      id: doc.$id,
-      userId: doc.userId,
-      title: doc.title,
-      description: doc.description,
-      priorityQuadrant: doc.priorityQuadrant,
-      assignedTimeblocks: Array.isArray(doc.assignedTimeblocks) 
-        ? doc.assignedTimeblocks 
-        : [],
-      estimatedTotalTimeMinutes: doc.estimatedTotalTimeMinutes || 0,
-      metadata: typeof doc.metadata === 'string' 
-        ? JSON.parse(doc.metadata) 
-        : (doc.metadata || {}),
-    };
-  } catch (error) {
-    console.error('Error getting task:', error);
-    return null;
-  }
-};
-
-export const saveTask = async (task: Task): Promise<void> => {
-  try {
-    const userId = await getCurrentUserId();
-    const existing = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TASKS,
-      [Query.equal('$id', task.id)]
-    );
-    
-    const data = {
-      userId: task.userId || userId, // Use provided userId or current user
-      title: task.title,
-      description: task.description,
-      priorityQuadrant: task.priorityQuadrant,
-      assignedTimeblocks: task.assignedTimeblocks || [],
-      estimatedTotalTimeMinutes: task.estimatedTotalTimeMinutes || 0,
-      metadata: JSON.stringify(task.metadata || {}),
-    };
-    
-    if (existing.documents.length > 0) {
-      // Verify ownership before updating
-      if (existing.documents[0].userId !== userId) {
-        throw new Error('Unauthorized to update this task');
-      }
-      await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.TASKS,
-        task.id,
-        data
+    if (taskExists) {
+      // Update existing task
+      console.log('[Storage] Updating existing task:', task.id);
+      await db.run(
+        `UPDATE tasks SET 
+          title = ?, description = ?, priorityQuadrant = ?, 
+          estimatedTotalTimeMinutes = ?, metadata = ?
+        WHERE id = ?`,
+        [task.title, task.description, task.priorityQuadrant, 
+         task.estimatedTotalTimeMinutes, metadata, task.id]
       );
+      console.log('[Storage] ✓ Task updated:', task.id);
+      return task.id;
     } else {
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.TASKS,
-        task.id,
-        data
+      // Insert new task
+      console.log('[Storage] Inserting new task:', task.title);
+      const result = await db.run(
+        `INSERT INTO tasks (title, description, priorityQuadrant, estimatedTotalTimeMinutes, metadata)
+         VALUES (?, ?, ?, ?, ?)`,
+        [task.title, task.description, task.priorityQuadrant, 
+         task.estimatedTotalTimeMinutes, metadata]
       );
+      
+      // Get the last inserted ID
+      const lastId = result.changes?.lastId;
+      console.log('[Storage] ✓ Task inserted with ID:', lastId);
+      
+      if (!lastId) {
+        // Fallback: query for the most recent task
+        const recent = await db.query(
+          'SELECT id FROM tasks ORDER BY id DESC LIMIT 1'
+        );
+        const newId = recent.values?.[0]?.id?.toString();
+        console.log('[Storage] ✓ Retrieved task ID from query:', newId);
+        return newId || task.id;
+      }
+      
+      return lastId.toString();
     }
   } catch (error) {
     console.error('Error saving task:', error);
@@ -261,13 +127,81 @@ export const saveTask = async (task: Task): Promise<void> => {
 
 export const deleteTask = async (id: string): Promise<void> => {
   try {
-    await databases.deleteDocument(
-      DATABASE_ID,
-      COLLECTIONS.TASKS,
-      id
-    );
+    await db.run('DELETE FROM tasks WHERE id = ?', [id]);
   } catch (error) {
     console.error('Error deleting task:', error);
+    throw error;
+  }
+};
+
+// Workplans
+export const getWorkplans = async (): Promise<Workplan[]> => {
+  try {
+    const result = await db.query('SELECT * FROM workplans ORDER BY createdAt DESC');
+    if (!result.values) return [];
+    
+    const workplans = result.values.map((row: Record<string, unknown>) => {
+      const tasks = row.tasks ? JSON.parse(row.tasks as string) : [];
+      console.log('[Storage] Workplan:', row.title, 'has tasks:', tasks);
+      return {
+        id: row.id.toString(),
+        userId: '1',
+        title: row.title as string,
+        scope: row.scope as 'day' | 'week' | 'month',
+        startDate: row.startDate as string,
+        endDate: row.endDate as string,
+        tasks: tasks
+      };
+    });
+    
+    console.log('[Storage] ✓ Loaded', workplans.length, 'workplans');
+    return workplans;
+  } catch (error) {
+    console.error('[Storage] Error getting workplans:', error);
+    return [];
+  }
+};
+
+export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
+  try {
+    const tasks = JSON.stringify(workplan.tasks || []);
+    console.log('[Storage] Saving workplan:', workplan.title, 'with tasks:', workplan.tasks);
+    
+    // Check if workplan exists by querying the database
+    const existing = workplan.id ? await db.query('SELECT id FROM workplans WHERE id = ?', [workplan.id]) : null;
+    const workplanExists = existing?.values && existing.values.length > 0;
+    
+    if (workplanExists) {
+      // Update existing workplan
+      console.log('[Storage] Updating existing workplan:', workplan.id);
+      await db.run(
+        `UPDATE workplans SET 
+          title = ?, scope = ?, startDate = ?, endDate = ?, tasks = ?
+        WHERE id = ?`,
+        [workplan.title, workplan.scope, workplan.startDate, workplan.endDate, tasks, workplan.id]
+      );
+      console.log('[Storage] ✓ Workplan updated');
+    } else {
+      // Insert new workplan
+      console.log('[Storage] Inserting new workplan');
+      await db.run(
+        `INSERT INTO workplans (title, scope, startDate, endDate, tasks)
+         VALUES (?, ?, ?, ?, ?)`,
+        [workplan.title, workplan.scope, workplan.startDate, workplan.endDate, tasks]
+      );
+      console.log('[Storage] ✓ Workplan inserted');
+    }
+  } catch (error) {
+    console.error('Error saving workplan:', error);
+    throw error;
+  }
+};
+
+export const deleteWorkplan = async (id: string): Promise<void> => {
+  try {
+    await db.run('DELETE FROM workplans WHERE id = ?', [id]);
+  } catch (error) {
+    console.error('Error deleting workplan:', error);
     throw error;
   }
 };
@@ -275,59 +209,35 @@ export const deleteTask = async (id: string): Promise<void> => {
 // Timeblocks
 export const getTimeblocks = async (): Promise<Timeblock[]> => {
   try {
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TIMEBLOCKS
-    );
+    const result = await db.query('SELECT * FROM timeblocks ORDER BY createdAt DESC');
+    if (!result.values) return [];
     
-    if (response.documents.length > 0) {
-      return response.documents.map(doc => ({
-        id: doc.$id,
-        durationMinutes: doc.durationMinutes,
-        label: doc.label,
-      }));
-    }
-    
-    return getDefaultTimeblocks();
+    return result.values.map((row: Record<string, unknown>) => ({
+      id: row.id.toString(),
+      durationMinutes: row.durationMinutes as number,
+      label: row.label as string
+    }));
   } catch (error) {
     console.error('Error getting timeblocks:', error);
-    return getDefaultTimeblocks();
+    return [];
   }
 };
 
-export const getDefaultTimeblocks = (): Timeblock[] => [
-  { id: 'tb-15', durationMinutes: 15, label: '15 min' },
-  { id: 'tb-30', durationMinutes: 30, label: '30 min' },
-  { id: 'tb-45', durationMinutes: 45, label: '45 min' },
-  { id: 'tb-60', durationMinutes: 60, label: '60 min' },
-];
-
 export const saveTimeblock = async (timeblock: Timeblock): Promise<void> => {
   try {
-    const existing = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TIMEBLOCKS,
-      [Query.equal('$id', timeblock.id)]
-    );
+    // Check if timeblock exists by querying the database
+    const existing = timeblock.id ? await db.query('SELECT id FROM timeblocks WHERE id = ?', [timeblock.id]) : null;
+    const timeblockExists = existing?.values && existing.values.length > 0;
     
-    const data = {
-      durationMinutes: timeblock.durationMinutes,
-      label: timeblock.label,
-    };
-    
-    if (existing.documents.length > 0) {
-      await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.TIMEBLOCKS,
-        timeblock.id,
-        data
+    if (timeblockExists) {
+      await db.run(
+        'UPDATE timeblocks SET durationMinutes = ?, label = ? WHERE id = ?',
+        [timeblock.durationMinutes, timeblock.label, timeblock.id]
       );
     } else {
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.TIMEBLOCKS,
-        timeblock.id,
-        data
+      await db.run(
+        'INSERT INTO timeblocks (durationMinutes, label) VALUES (?, ?)',
+        [timeblock.durationMinutes, timeblock.label]
       );
     }
   } catch (error) {
@@ -336,47 +246,36 @@ export const saveTimeblock = async (timeblock: Timeblock): Promise<void> => {
   }
 };
 
+export const deleteTimeblock = async (id: string): Promise<void> => {
+  try {
+    await db.run('DELETE FROM timeblocks WHERE id = ?', [id]);
+  } catch (error) {
+    console.error('Error deleting timeblock:', error);
+    throw error;
+  }
+};
+
 // Timer Sessions
 export const getTimerSessions = async (): Promise<TimerSession[]> => {
   try {
-    const userId = await getCurrentUserId();
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.SESSIONS,
-      [
-        Query.equal('userId', userId),
-        Query.orderDesc('$createdAt')
-      ]
-    );
+    const result = await db.query('SELECT * FROM sessions ORDER BY createdAt DESC');
+    if (!result.values) return [];
     
-    return response.documents.map(doc => {
-      // Deserialize each JSON string back to PausePeriod object
-      const pausePeriods = Array.isArray(doc.pausePeriods)
-        ? doc.pausePeriods.map((periodStr: string) => {
-            try {
-              return typeof periodStr === 'string' ? JSON.parse(periodStr) : periodStr;
-            } catch {
-              return periodStr;
-            }
-          })
-        : [];
-      
-      return {
-        id: doc.$id,
-        userId: doc.userId,
-        taskId: doc.taskId,
-        timeblockId: doc.timeblockId,
-        startTimestamp: doc.startTimestamp,
-        endTimestamp: doc.endTimestamp,
-        productiveSeconds: doc.productiveSeconds || 0,
-        wastedSeconds: doc.wastedSeconds || 0,
-        pausePeriods,
-        completed: doc.completed || false,
-        isStopped: doc.isStopped || false,
-        isOnLongBreak: doc.isOnLongBreak || false,
-        notes: doc.notes,
-      };
-    });
+    return result.values.map((row: Record<string, unknown>) => ({
+      id: row.id.toString(),
+      userId: '1',
+      taskId: row.taskId as string,
+      timeblockId: row.timeblockId as string,
+      startTimestamp: row.startTimestamp as string,
+      endTimestamp: row.endTimestamp as string | undefined,
+      pausePeriods: row.pausePeriods ? JSON.parse(row.pausePeriods as string) : [],
+      completed: row.completed === 1,
+      productiveSeconds: row.productiveSeconds as number || 0,
+      wastedSeconds: row.wastedSeconds as number || 0,
+      isStopped: row.isStopped === 1,
+      isOnLongBreak: row.isOnLongBreak === 1,
+      notes: row.notes as string | undefined
+    }));
   } catch (error) {
     console.error('Error getting timer sessions:', error);
     return [];
@@ -385,47 +284,48 @@ export const getTimerSessions = async (): Promise<TimerSession[]> => {
 
 export const saveTimerSession = async (session: TimerSession): Promise<void> => {
   try {
-    const userId = await getCurrentUserId();
-    const existing = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.SESSIONS,
-      [Query.equal('$id', session.id)]
-    );
+    const pausePeriods = JSON.stringify(session.pausePeriods || []);
     
-    // Build data object, excluding undefined fields
-    const data: Record<string, unknown> = {
-      userId: session.userId || userId,
-      taskId: session.taskId,
-      timeblockId: session.timeblockId,
-      startTimestamp: session.startTimestamp,
-      productiveSeconds: session.productiveSeconds || 0,
-      wastedSeconds: session.wastedSeconds || 0,
-      // Serialize each PausePeriod object to JSON string for the array
-      pausePeriods: (session.pausePeriods || []).map(period => JSON.stringify(period)),
-      completed: session.completed || false,
-      isStopped: session.isStopped || false,
-      isOnLongBreak: session.isOnLongBreak || false,
-      notes: session.notes || '',
-    };
-    
-    // Only include endTimestamp if it exists
-    if (session.endTimestamp) {
-      data.endTimestamp = session.endTimestamp;
-    }
-    
-    if (existing.documents.length > 0) {
-      await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.SESSIONS,
-        session.id,
-        data
-      );
+    const values = [
+      session.taskId,
+      session.timeblockId,
+      session.startTimestamp,
+      session.endTimestamp || null,
+      session.productiveSeconds || 0,
+      session.wastedSeconds || 0,
+      pausePeriods,
+      session.completed ? 1 : 0,
+      session.isStopped ? 1 : 0,
+      session.isOnLongBreak ? 1 : 0,
+      session.notes || ''
+    ];
+
+    if (session.id && session.id.startsWith('session-')) {
+      // Check if exists first
+      const existing = await db.query('SELECT id FROM sessions WHERE id = ?', [session.id.replace('session-', '')]);
+      if (existing.values && existing.values.length > 0) {
+        await db.run(
+          `UPDATE sessions SET 
+            taskId = ?, timeblockId = ?, startTimestamp = ?, endTimestamp = ?,
+            productiveSeconds = ?, wastedSeconds = ?, pausePeriods = ?,
+            completed = ?, isStopped = ?, isOnLongBreak = ?, notes = ?
+          WHERE id = ?`,
+          [...values, session.id.replace('session-', '')]
+        );
+      } else {
+        await db.run(
+          `INSERT INTO sessions (taskId, timeblockId, startTimestamp, endTimestamp,
+            productiveSeconds, wastedSeconds, pausePeriods, completed, isStopped, isOnLongBreak, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          values
+        );
+      }
     } else {
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.SESSIONS,
-        session.id,
-        data
+      await db.run(
+        `INSERT INTO sessions (taskId, timeblockId, startTimestamp, endTimestamp,
+          productiveSeconds, wastedSeconds, pausePeriods, completed, isStopped, isOnLongBreak, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        values
       );
     }
   } catch (error) {
@@ -434,40 +334,29 @@ export const saveTimerSession = async (session: TimerSession): Promise<void> => 
   }
 };
 
+export const deleteTimerSession = async (id: string): Promise<void> => {
+  try {
+    await db.run('DELETE FROM sessions WHERE id = ?', [id]);
+  } catch (error) {
+    console.error('Error deleting timer session:', error);
+    throw error;
+  }
+};
+
 // Today Plan
 export const getTodayPlan = async (date: string): Promise<TodayPlan | null> => {
   try {
-    const userId = await getCurrentUserId();
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TODAY_PLANS,
-      [
-        Query.equal('userId', userId),
-        Query.equal('date', date)
-      ]
-    );
-    
-    if (response.documents.length > 0) {
-      const doc = response.documents[0];
-      // Deserialize each JSON string back to TodayTask object
-      const tasks = Array.isArray(doc.tasks) 
-        ? doc.tasks.map((taskStr: string) => {
-            try {
-              return typeof taskStr === 'string' ? JSON.parse(taskStr) : taskStr;
-            } catch {
-              return taskStr;
-            }
-          })
-        : [];
-      
+    const result = await db.query('SELECT * FROM today_plans WHERE date = ? LIMIT 1', [date]);
+    if (result.values && result.values.length > 0) {
+      const row = result.values[0];
       return {
-        id: doc.$id,
-        userId: doc.userId,
-        date: doc.date,
-        targetTimeblocks: doc.targetTimeblocks || 0,
-        timeblockDuration: doc.timeblockDuration || 30,
-        tasks,
-        completedTimeblocks: doc.completedTimeblocks || 0,
+        id: row.id.toString(),
+        userId: '1',
+        date: row.date as string,
+        targetTimeblocks: row.targetTimeblocks as number,
+        timeblockDuration: row.timeblockDuration as number,
+        tasks: row.tasks ? JSON.parse(row.tasks as string) : [],
+        completedTimeblocks: row.completedTimeblocks as number
       };
     }
     return null;
@@ -479,43 +368,21 @@ export const getTodayPlan = async (date: string): Promise<TodayPlan | null> => {
 
 export const saveTodayPlan = async (plan: TodayPlan): Promise<void> => {
   try {
-    const userId = await getCurrentUserId();
-    const existing = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TODAY_PLANS,
-      [
-        Query.equal('userId', userId),
-        Query.equal('date', plan.date)
-      ]
-    );
+    const tasks = JSON.stringify(plan.tasks || []);
     
-    const data = {
-      userId: plan.userId || userId,
-      date: plan.date,
-      targetTimeblocks: plan.targetTimeblocks || 0,
-      timeblockDuration: plan.timeblockDuration || 30,
-      // Serialize each TodayTask object as JSON string for the array
-      tasks: (plan.tasks || []).map(task => JSON.stringify(task)),
-      completedTimeblocks: plan.completedTimeblocks || 0,
-    };
-    
-    if (existing.documents.length > 0) {
-      // Verify ownership
-      if (existing.documents[0].userId !== userId) {
-        throw new Error('Unauthorized to update this plan');
-      }
-      await databases.updateDocument(
-        DATABASE_ID,
-        COLLECTIONS.TODAY_PLANS,
-        existing.documents[0].$id,
-        data
+    const existing = await getTodayPlan(plan.date);
+    if (existing) {
+      await db.run(
+        `UPDATE today_plans SET 
+          targetTimeblocks = ?, timeblockDuration = ?, tasks = ?, completedTimeblocks = ?
+        WHERE date = ?`,
+        [plan.targetTimeblocks, plan.timeblockDuration, tasks, plan.completedTimeblocks, plan.date]
       );
     } else {
-      await databases.createDocument(
-        DATABASE_ID,
-        COLLECTIONS.TODAY_PLANS,
-        plan.id || ID.unique(),
-        data
+      await db.run(
+        `INSERT INTO today_plans (date, targetTimeblocks, timeblockDuration, tasks, completedTimeblocks)
+         VALUES (?, ?, ?, ?, ?)`,
+        [plan.date, plan.targetTimeblocks, plan.timeblockDuration, tasks, plan.completedTimeblocks]
       );
     }
   } catch (error) {
@@ -524,80 +391,20 @@ export const saveTodayPlan = async (plan: TodayPlan): Promise<void> => {
   }
 };
 
-export const deleteTodayPlan = async (date: string): Promise<void> => {
+export const clearAllTodayData = async (date: string): Promise<void> => {
   try {
-    const userId = await getCurrentUserId();
-    const response = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TODAY_PLANS,
-      [
-        Query.equal('userId', userId),
-        Query.equal('date', date)
-      ]
-    );
-    
-    if (response.documents.length > 0) {
-      await databases.deleteDocument(
-        DATABASE_ID,
-        COLLECTIONS.TODAY_PLANS,
-        response.documents[0].$id
-      );
-    }
+    await db.run('DELETE FROM today_plans WHERE date = ?', [date]);
   } catch (error) {
-    console.error('Error deleting today plan:', error);
+    console.error('Error clearing today data:', error);
     throw error;
   }
 };
 
-// Clear all today's data (plan and sessions)
-export const clearAllTodayData = async (date: string): Promise<void> => {
+export const deleteTodayPlan = async (id: string): Promise<void> => {
   try {
-    const userId = await getCurrentUserId();
-    
-    // Delete today's plan
-    const planResponse = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TODAY_PLANS,
-      [
-        Query.equal('userId', userId),
-        Query.equal('date', date)
-      ]
-    );
-    
-    if (planResponse.documents.length > 0) {
-      await databases.deleteDocument(
-        DATABASE_ID,
-        COLLECTIONS.TODAY_PLANS,
-        planResponse.documents[0].$id
-      );
-    }
-
-    // Delete all timer sessions for today
-    // Sessions don't have a date field, so we need to get all sessions
-    // and filter by startTimestamp
-    const todayStart = new Date(date + 'T00:00:00').toISOString();
-    const todayEnd = new Date(date + 'T23:59:59').toISOString();
-    
-    const sessionsResponse = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.SESSIONS,
-      [
-        Query.equal('userId', userId),
-        Query.greaterThanEqual('startTimestamp', todayStart),
-        Query.lessThanEqual('startTimestamp', todayEnd),
-        Query.limit(100)
-      ]
-    );
-    
-    for (const session of sessionsResponse.documents) {
-      await databases.deleteDocument(
-        DATABASE_ID,
-        COLLECTIONS.SESSIONS,
-        session.$id
-      );
-    }
+    await db.run('DELETE FROM today_plans WHERE id = ?', [id]);
   } catch (error) {
-    console.error('Error clearing all today data:', error);
+    console.error('Error deleting today plan:', error);
     throw error;
   }
 };
@@ -605,16 +412,16 @@ export const clearAllTodayData = async (date: string): Promise<void> => {
 // Initialize default data
 export const initializeDefaultData = async (): Promise<void> => {
   try {
-    // Only initialize timeblocks for authenticated users
-    // User data is now managed by Appwrite Auth
-    const timeblocks = await getTimeblocks();
-    if (timeblocks.length === 0 || timeblocks === getDefaultTimeblocks()) {
-      for (const block of getDefaultTimeblocks()) {
-        await saveTimeblock(block);
-      }
+    const user = await getUser();
+    if (!user) {
+      // User will be created during onboarding
+      console.log('No user found - onboarding required');
     }
   } catch (error) {
-    // User not authenticated yet, skip initialization
-    console.log('Skipping initialization - user not authenticated');
+    console.error('Error initializing default data:', error);
+    throw error;
   }
 };
+
+// Helper for getting current user ID (always returns '1' for local-only app)
+export const getCurrentUserId = (): string => '1';

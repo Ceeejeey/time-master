@@ -1,124 +1,59 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { account } from '@/lib/appwrite';
-import { Models } from 'appwrite';
-import { Browser } from '@capacitor/browser';
-import { Capacitor } from '@capacitor/core';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getUser } from '@/lib/storage';
+import { db } from '@/database';
+import type { User } from '@/lib/types';
 
 interface AuthContextType {
-  user: Models.User<Models.Preferences> | null;
+  user: User | null;
   loading: boolean;
-  loginWithGoogle: () => Promise<void>;
-  loginWithGithub: () => Promise<void>;
+  needsOnboarding: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
+  const loadUser = async () => {
     try {
-      const currentUser = await account.get();
-      setUser(currentUser);
-      return currentUser;
+      console.log('[AuthContext] Initializing database...');
+      await db.initialize();
+      console.log('[AuthContext] Loading user...');
+      const localUser = await getUser();
+      
+      console.log('[AuthContext] User loaded:', localUser ? 'Found' : 'Not found');
+      if (!localUser) {
+        setNeedsOnboarding(true);
+        setUser(null);
+      } else {
+        setUser(localUser);
+        setNeedsOnboarding(false);
+      }
     } catch (error) {
-      setUser(null);
-      return null;
+      console.error('[AuthContext] Error loading user:', error);
+      setNeedsOnboarding(true);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadUser();
+  }, []);
+
   const refreshUser = async () => {
-    try {
-      const currentUser = await account.get();
-      setUser(currentUser);
-    } catch (error) {
-      setUser(null);
-    }
-  };
-
-  const loginWithGoogle = async () => {
-    try {
-      const isNative = Capacitor.isNativePlatform();
-      
-      console.log('Initiating Google OAuth, isNative:', isNative);
-      
-      if (isNative) {
-        // For mobile: Use Appwrite v2's official callback scheme
-        console.log('Using Appwrite v2 official callback scheme...');
-        
-        await account.createOAuth2Session(
-          'google',
-          'appwrite-callback://success',
-          'appwrite-callback://failure'
-        );
-        
-        // The callback will be handled by the deep link listener in main.tsx
-      } else {
-        // For web: Regular callback
-        const successUrl = `${window.location.origin}/auth/callback`;
-        const failureUrl = `${window.location.origin}/login`;
-        
-        await account.createOAuth2Session(
-          'google',
-          successUrl,
-          failureUrl
-        );
-      }
-    } catch (error) {
-      console.error('Google login error:', error);
-      throw error;
-    }
-  };
-
-  const loginWithGithub = async () => {
-    try {
-      const isNative = Capacitor.isNativePlatform();
-      
-      console.log('Initiating GitHub OAuth, isNative:', isNative);
-      
-      if (isNative) {
-        // For mobile: Use Appwrite v2's official callback scheme
-        console.log('Using Appwrite v2 official callback scheme...');
-        
-        await account.createOAuth2Session(
-          'github',
-          'appwrite-callback://success',
-          'appwrite-callback://failure'
-        );
-      } else {
-        // For web: Regular callback
-        const successUrl = `${window.location.origin}/auth/callback`;
-        const failureUrl = `${window.location.origin}/login`;
-        
-        await account.createOAuth2Session(
-          'github',
-          successUrl,
-          failureUrl
-        );
-      }
-    } catch (error) {
-      console.error('GitHub login error:', error);
-      throw error;
-    }
+    setLoading(true);
+    await loadUser();
   };
 
   const logout = async () => {
-    try {
-      await account.deleteSession('current');
-      setUser(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
+    // For local-only app, just clear user data
+    setUser(null);
+    setNeedsOnboarding(true);
   };
 
   return (
@@ -126,8 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         loading,
-        loginWithGoogle,
-        loginWithGithub,
+        needsOnboarding,
         logout,
         refreshUser,
       }}

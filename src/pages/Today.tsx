@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Play, Trash2, Target, CheckCircle2, Circle, Calendar as CalendarIcon, RotateCcw } from 'lucide-react';
+import { Plus, Play, Trash2, Target, CheckCircle2, Circle, Calendar as CalendarIcon, RotateCcw, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { getWorkplans, saveTodayPlan, clearAllTodayData } from '@/lib/storage';
+import { getWorkplans, saveTodayPlan, clearAllTodayData, getCurrentUserId } from '@/lib/storage';
 import { Workplan, TodayPlan, TodayTask } from '@/lib/types';
 import { format } from 'date-fns';
 import { getPriorityLabel, getPriorityColor } from '@/lib/priority';
@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const Today = () => {
-  const { tasks, sessions, todayPlan: contextTodayPlan, refreshTodayPlan } = useData();
+  const { tasks, sessions, todayPlan: contextTodayPlan, refreshTodayPlan, refreshData } = useData();
   const [workplans, setWorkplans] = useState<Workplan[]>([]);
   const [todayPlan, setTodayPlan] = useState<TodayPlan | null>(null);
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
@@ -36,11 +36,23 @@ const Today = () => {
   const [targetTimeblocks, setTargetTimeblocks] = useState<number | null>(null);
   const [timeblockDuration, setTimeblockDuration] = useState<number | null>(null);
   const hasInitialized = useRef(false); // Track if values have been initialized
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [startY, setStartY] = useState(0);
 
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [timeblockCount, setTimeblockCount] = useState(1);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const today = format(currentDate, 'yyyy-MM-dd');
+
+  // Update current date every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   // Sync with context - only update todayPlan, not form inputs while user is editing
   useEffect(() => {
@@ -55,8 +67,10 @@ const Today = () => {
     } else {
       // Create new today plan if none exists
       const createNewPlan = async () => {
+        const userId = getCurrentUserId();
         const newPlan: TodayPlan = {
           id: `today-${Date.now()}`,
+          userId,
           date: today,
           targetTimeblocks: 8,
           timeblockDuration: 25,
@@ -80,6 +94,38 @@ const Today = () => {
   const loadData = async () => {
     const workplansData = await getWorkplans();
     setWorkplans(workplansData);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      setCurrentDate(new Date()); // Update date on refresh
+      await Promise.all([refreshData(), refreshTodayPlan(), loadData()]);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      setStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (window.scrollY === 0 && startY > 0) {
+      const currentY = e.touches[0].clientY;
+      const distance = Math.max(0, Math.min(currentY - startY, 80));
+      setPullDistance(distance);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 60) {
+      await handleRefresh();
+    }
+    setStartY(0);
+    setPullDistance(0);
   };
 
   const handleSetGoal = async () => {
@@ -182,8 +228,10 @@ const Today = () => {
       await clearAllTodayData(today);
       
       // Create a fresh plan
+      const userId = getCurrentUserId();
       const newPlan: TodayPlan = {
         id: `today-${Date.now()}`,
+        userId,
         date: today,
         targetTimeblocks: 8,
         timeblockDuration: 25,
@@ -234,7 +282,37 @@ const Today = () => {
   const remainingBlocks = todayPlan ? todayPlan.targetTimeblocks - totalAssignedBlocks : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to refresh indicator */}
+      {pullDistance > 0 && (
+        <div 
+          className="fixed top-14 left-0 right-0 flex justify-center z-50 transition-opacity"
+          style={{ 
+            opacity: pullDistance / 60,
+            transform: `translateY(${Math.min(pullDistance - 20, 40)}px)` 
+          }}
+        >
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <RefreshCw className={`w-4 h-4 ${pullDistance > 60 ? 'animate-spin' : ''}`} />
+            <span className="text-sm">{pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh'}</span>
+          </div>
+        </div>
+      )}
+      
+      {isRefreshing && (
+        <div className="fixed top-14 left-0 right-0 flex justify-center z-50">
+          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Refreshing...</span>
+          </div>
+        </div>
+      )}
+      
       <div className="container mx-auto max-w-6xl space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -243,7 +321,7 @@ const Today = () => {
               Today's Plan
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground mt-1">
-              {format(new Date(), 'EEEE, MMMM d, yyyy')}
+              {format(currentDate, 'EEEE, MMMM d, yyyy')}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
