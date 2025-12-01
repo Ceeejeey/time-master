@@ -432,7 +432,7 @@ const Workplan = () => {
                       {workplanTasks.map(task => (
                         <div
                           key={task.id}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-all group"
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-lg border-2 border-border/60 dark:border-border bg-card dark:bg-card/50 hover:shadow-md hover:border-primary/40 dark:hover:border-primary/60 transition-all group"
                         >
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             <div

@@ -53,7 +53,7 @@ const Reports = () => {
   const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+        <div className="bg-background dark:bg-background/95 border-2 border-border/60 dark:border-border rounded-lg shadow-lg p-3">
           <p className="font-semibold">{payload[0].name}</p>
           <p className="text-sm text-muted-foreground">
             {formatTimeHMS(payload[0].value)}
@@ -68,7 +68,7 @@ const Reports = () => {
   const CustomBarTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+        <div className="bg-background dark:bg-background/95 border-2 border-border/60 dark:border-border rounded-lg shadow-lg p-3">
           <p className="font-semibold mb-1">{label}</p>
           <p className="text-sm text-destructive">
             Wasted: {formatTimeHMS(payload[0].value)}
@@ -126,7 +126,7 @@ const Reports = () => {
               <>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                  <Card className="border-2 border-primary/30 dark:border-primary/50 bg-gradient-to-br from-primary/10 dark:from-primary/20 to-primary/15 dark:to-primary/25">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Clock className="w-4 h-4 text-primary" />
@@ -140,7 +140,7 @@ const Reports = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-2 border-destructive/20 bg-gradient-to-br from-destructive/5 to-destructive/10">
+                  <Card className="border-2 border-destructive/30 dark:border-destructive/50 bg-gradient-to-br from-destructive/10 dark:from-destructive/20 to-destructive/15 dark:to-destructive/25">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-destructive" />
@@ -154,7 +154,7 @@ const Reports = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-2 border-secondary/20 bg-gradient-to-br from-secondary/5 to-secondary/10">
+                  <Card className="border-2 border-secondary/30 dark:border-secondary/50 bg-gradient-to-br from-secondary/10 dark:from-secondary/20 to-secondary/15 dark:to-secondary/25">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <BarChart3 className="w-4 h-4 text-secondary" />
@@ -168,7 +168,7 @@ const Reports = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-2 border-accent/20 bg-gradient-to-br from-accent/5 to-accent/10">
+                  <Card className="border-2 border-accent/30 dark:border-accent/50 bg-gradient-to-br from-accent/10 dark:from-accent/20 to-accent/15 dark:to-accent/25">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-accent" />
@@ -187,7 +187,7 @@ const Reports = () => {
                 {/* Charts */}
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">
                   {/* Pie Chart */}
-                  <Card className="border-2 border-primary/20">
+                  <Card className="border-2 border-primary/30 dark:border-primary/50 dark:bg-card/50">
                     <CardHeader className="p-4 sm:p-6">
                       <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                         <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -250,7 +250,7 @@ const Reports = () => {
                   </Card>
 
                   {/* Bar Chart */}
-                  <Card className="border-2 border-destructive/20">
+                  <Card className="border-2 border-destructive/30 dark:border-destructive/50 dark:bg-card/50">
                     <CardHeader className="p-4 sm:p-6">
                       <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                         <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
@@ -313,7 +313,7 @@ const Reports = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {currentReport.blocksCompleted > 0 && (
-                      <div className="p-4 rounded-lg bg-muted border border-border">
+                      <div className="p-4 rounded-lg bg-muted/50 dark:bg-muted/30 border-2 border-border/60 dark:border-border">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                           <div>
                             <p className="text-xs text-muted-foreground mb-1">Productive Time</p>
@@ -360,7 +360,7 @@ const Reports = () => {
                       </div>
                     )}
                     {currentReport.blocksCompleted === 0 && (
-                      <div className="p-4 rounded-lg bg-muted border border-border text-center">
+                      <div className="p-4 rounded-lg bg-muted/50 dark:bg-muted/30 border-2 border-border/60 dark:border-border text-center">
                         <p className="text-muted-foreground">
                           No completed timeblocks yet. Start a timer to see your productivity insights!
                         </p>

@@ -145,7 +145,7 @@ const Home = () => {
 
         {/* Stats Overview - Responsive grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
+          <Card className="border-2 border-primary/30 dark:border-primary/50 bg-gradient-to-br from-primary/15 dark:from-primary/25 via-primary/8 dark:via-primary/15 to-transparent hover:shadow-lg hover:scale-105 transition-all">
             <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
               <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
                 <Zap className="w-3 h-3 text-primary flex-shrink-0" />
@@ -160,7 +160,7 @@ const Home = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-destructive/20 bg-gradient-to-br from-destructive/10 via-destructive/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
+          <Card className="border-2 border-destructive/30 dark:border-destructive/50 bg-gradient-to-br from-destructive/15 dark:from-destructive/25 via-destructive/8 dark:via-destructive/15 to-transparent hover:shadow-lg hover:scale-105 transition-all">
             <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
               <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
                 <Clock className="w-3 h-3 text-destructive flex-shrink-0" />
@@ -175,7 +175,7 @@ const Home = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-secondary/20 bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
+          <Card className="border-2 border-secondary/30 dark:border-secondary/50 bg-gradient-to-br from-secondary/15 dark:from-secondary/25 via-secondary/8 dark:via-secondary/15 to-transparent hover:shadow-lg hover:scale-105 transition-all">
             <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
               <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
                 <Award className="w-3 h-3 text-secondary flex-shrink-0" />
@@ -192,7 +192,7 @@ const Home = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-accent/20 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent hover:shadow-lg hover:scale-105 transition-all">
+          <Card className="border-2 border-accent/30 dark:border-accent/50 bg-gradient-to-br from-accent/15 dark:from-accent/25 via-accent/8 dark:via-accent/15 to-transparent hover:shadow-lg hover:scale-105 transition-all">
             <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-4">
               <CardTitle className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
                 <TrendingUp className="w-3 h-3 text-accent flex-shrink-0" />
@@ -227,7 +227,7 @@ const Home = () => {
 
         {/* Today's Tasks */}
         {todayTasks.length > 0 && (
-          <Card className="shadow-xl border-2 border-primary/10">
+          <Card className="shadow-xl border-2 border-primary/30 dark:border-primary/50 dark:bg-card/50">
             <CardHeader className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex-1">
@@ -252,7 +252,7 @@ const Home = () => {
                 {todayTasks.slice(0, 4).map(task => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 bg-gradient-to-r from-card to-card/50 hover:shadow-md hover:border-primary/30 transition-all group touch-manipulation"
+                    className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-border/60 dark:border-border bg-gradient-to-r from-card dark:from-card/50 to-card/50 dark:to-card/30 hover:shadow-md hover:border-primary/40 dark:hover:border-primary/60 transition-all group touch-manipulation"
                   >
                     <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                       <div
@@ -321,7 +321,7 @@ const Home = () => {
           </Link>
 
           <Link to="/reports" className="block group">
-            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-primary/20 hover:border-primary/40 bg-gradient-to-br from-background to-primary/5 touch-manipulation">
+            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-primary/30 dark:border-primary/50 hover:border-primary/50 dark:hover:border-primary/70 bg-gradient-to-br from-background dark:from-background/50 to-primary/10 dark:to-primary/20 touch-manipulation">
               <CardHeader className="p-4 sm:p-6">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                   <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
@@ -335,7 +335,7 @@ const Home = () => {
           </Link>
 
           <Link to="/workplan" className="block group">
-            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-secondary/20 hover:border-secondary/40 bg-gradient-to-br from-background to-secondary/5 touch-manipulation">
+            <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-secondary/30 dark:border-secondary/50 hover:border-secondary/50 dark:hover:border-secondary/70 bg-gradient-to-br from-background dark:from-background/50 to-secondary/10 dark:to-secondary/20 touch-manipulation">
               <CardHeader className="p-4 sm:p-6">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-secondary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                   <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-secondary" />
@@ -351,7 +351,7 @@ const Home = () => {
 
         {/* Priority Tasks or Empty State - Mobile optimized */}
         {priorityTasks.length > 0 ? (
-          <Card className="border-2 border-destructive/20 bg-gradient-to-br from-destructive/5 to-transparent">
+          <Card className="border-2 border-destructive/30 dark:border-destructive/50 bg-gradient-to-br from-destructive/10 dark:from-destructive/20 to-transparent dark:bg-card/50">
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg sm:text-xl md:text-2xl flex items-center gap-2">
                 <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-destructive flex-shrink-0" />
@@ -365,7 +365,7 @@ const Home = () => {
               {priorityTasks.slice(0, 3).map(task => (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-destructive/5 border-2 border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30 transition-all group touch-manipulation"
+                  className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-destructive/10 dark:bg-destructive/20 border-2 border-destructive/30 dark:border-destructive/50 hover:bg-destructive/15 dark:hover:bg-destructive/30 hover:border-destructive/40 dark:hover:border-destructive/60 transition-all group touch-manipulation"
                 >
                   <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                     <div className="w-1.5 sm:w-2 h-10 sm:h-12 bg-destructive rounded-full flex-shrink-0" />
@@ -391,7 +391,7 @@ const Home = () => {
             </CardContent>
           </Card>
         ) : todayTasks.length === 0 ? (
-          <Card className="border-2 border-dashed border-primary/30">
+          <Card className="border-2 border-dashed border-primary/40 dark:border-primary/60 dark:bg-card/50">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
                 <Target className="w-10 h-10 text-primary" />

@@ -146,7 +146,7 @@ const Settings = () => {
         </Card>
 
         {/* Premium */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
+        <Card className="border-2 border-primary/30 dark:border-primary/50 bg-gradient-to-br from-primary/10 dark:from-primary/20 to-secondary/10 dark:to-secondary/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Palette className="w-5 h-5 text-primary" />

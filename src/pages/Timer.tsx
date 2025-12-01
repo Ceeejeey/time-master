@@ -212,7 +212,7 @@ const Timer = () => {
             </CardContent>
           </Card>
         ) : isOnLongBreak ? (
-          <Card className="border-2 border-orange-500/20">
+          <Card className="border-2 border-orange-500/30 dark:border-orange-500/50 dark:bg-card/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Coffee className="w-5 h-5 text-orange-500" />
@@ -256,7 +256,7 @@ const Timer = () => {
         ) : (
           <div className="space-y-6">
             {/* Timer Display */}
-            <Card className="border-2 border-primary/20">
+            <Card className="border-2 border-primary/30 dark:border-primary/50 dark:bg-card/50">
               <CardContent className="pt-8">
                 {selectedTask && (
                   <div className="text-center mb-6">

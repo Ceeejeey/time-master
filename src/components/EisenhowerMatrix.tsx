@@ -36,7 +36,7 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
     textColor: string;
   }) => (
     <div 
-      className="rounded-xl border-2 p-3 sm:p-4 min-h-[250px] sm:min-h-[300px] transition-all hover:shadow-lg"
+      className="rounded-xl border-2 p-3 sm:p-4 min-h-[250px] sm:min-h-[300px] transition-all hover:shadow-lg dark:bg-opacity-20"
       style={{ 
         borderColor: bgColor,
         backgroundColor: `${bgColor}10`
@@ -65,7 +65,7 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
         {tasks.map(task => (
           <div
             key={task.id}
-            className="group relative rounded-lg border bg-card p-2 sm:p-3 transition-all hover:shadow-md"
+            className="group relative rounded-lg border-2 border-border/60 dark:border-border bg-card dark:bg-card/50 p-2 sm:p-3 transition-all hover:shadow-md hover:border-primary/40 dark:hover:border-primary/60"
           >
             <div className="flex items-start gap-2">
               <div

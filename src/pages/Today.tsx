@@ -421,7 +421,7 @@ const Today = () => {
         </div>
 
         {/* Progress Card */}
-        <Card className="shadow-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
+        <Card className="shadow-lg border-2 border-primary/30 dark:border-primary/40 bg-gradient-to-br from-primary/10 dark:from-primary/20 to-secondary/10 dark:to-secondary/20">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <Target className="w-5 h-5 text-primary" />
@@ -561,10 +561,10 @@ const Today = () => {
                       key={todayTask.id}
                       className={`group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border-2 transition-all ${
                         isTaskFullyCompleted
-                          ? 'bg-primary/5 border-primary/50'
+                          ? 'bg-primary/10 dark:bg-primary/20 border-primary/50 dark:border-primary/60'
                           : todayTask.completed
-                          ? 'bg-muted/50 border-muted opacity-75'
-                          : 'bg-card border-border hover:shadow-lg hover:border-primary/30'
+                          ? 'bg-muted/50 dark:bg-muted/30 border-muted/60 dark:border-muted/80 opacity-75'
+                          : 'bg-card dark:bg-card/50 border-border/60 dark:border-border hover:shadow-lg hover:border-primary/40 dark:hover:border-primary/60'
                       }`}
                     >
                       {/* Complete Button & Task Info */}
