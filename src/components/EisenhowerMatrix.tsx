@@ -36,10 +36,10 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
     textColor: string;
   }) => (
     <div 
-      className="rounded-xl border-2 p-3 sm:p-4 min-h-[250px] sm:min-h-[300px] transition-all hover:shadow-lg dark:bg-opacity-20"
+      className="rounded-xl border-2 p-4 min-h-[250px] sm:min-h-[300px] transition-all hover:shadow-lg shadow-sm backdrop-blur-sm"
       style={{ 
         borderColor: bgColor,
-        backgroundColor: `${bgColor}10`
+        backgroundColor: `${bgColor}15`
       }}
     >
       <div className="mb-3 sm:mb-4">
@@ -61,33 +61,34 @@ export const EisenhowerMatrix = ({ tasks, onEditTask, onDeleteTask }: Eisenhower
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {tasks.map(task => (
           <div
             key={task.id}
-            className="group relative rounded-lg border-2 border-border/60 dark:border-border bg-card dark:bg-card/50 p-2 sm:p-3 transition-all hover:shadow-md hover:border-primary/40 dark:hover:border-primary/60"
+            className="group relative rounded-xl bg-card/50 dark:bg-card/30 border-2 border-zinc-200 dark:border-zinc-700 p-2.5 shadow-sm transition-all hover:shadow-md hover:border-primary/60 dark:hover:border-primary/70 hover:-translate-y-0.5"
           >
             <div className="flex items-start gap-2">
               <div
-                className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                className="w-2.5 h-2.5 rounded-full mt-0.5 flex-shrink-0 ring-2 ring-white dark:ring-zinc-900 shadow-sm"
                 style={{ backgroundColor: bgColor }}
               />
               <div className="flex-1 min-w-0 pr-20 sm:pr-0">
-                <p className="font-medium text-xs sm:text-sm leading-tight mb-1">{task.title}</p>
+                <p className="font-semibold text-xs sm:text-sm leading-tight mb-1 text-foreground">{task.title}</p>
                 {task.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">
                     {task.description}
                   </p>
                 )}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span 
-                    className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap"
+                    className="text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap shadow-sm border"
                     style={{
-                      backgroundColor: `${bgColor}20`,
-                      color: textColor
+                      backgroundColor: bgColor + '25',
+                      color: textColor,
+                      borderColor: bgColor + '40'
                     }}
                   >
-                    {task.estimatedTotalTimeMinutes}m
+                    ⏱ {task.estimatedTotalTimeMinutes}m
                   </span>
                 </div>
               </div>

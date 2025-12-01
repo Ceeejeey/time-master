@@ -1,21 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Edit2, Calendar, Grid3x3, List, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getTasks, getWorkplans, saveWorkplan, deleteTask, getCurrentUserId } from '@/lib/storage';
-import { Task, Workplan as WorkplanType } from '@/lib/types';
-import { format } from 'date-fns';
-import { getPriorityLabel, getPriorityColor } from '@/lib/priority';
-import { toast } from '@/hooks/use-toast';
-import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Plus,
+  Trash2,
+  Edit2,
+  Calendar,
+  Grid3x3,
+  List,
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  getTasks,
+  getWorkplans,
+  saveWorkplan,
+  deleteTask,
+  getCurrentUserId,
+} from "@/lib/storage";
+import { Task, Workplan as WorkplanType } from "@/lib/types";
+import { format } from "date-fns";
+import { getPriorityLabel, getPriorityColor } from "@/lib/priority";
+import { toast } from "@/hooks/use-toast";
+import { EisenhowerMatrix } from "@/components/EisenhowerMatrix";
 
 const Workplan = () => {
   const navigate = useNavigate();
   const [workplans, setWorkplans] = useState<WorkplanType[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedWorkplan, setSelectedWorkplan] = useState<WorkplanType | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'matrix'>('matrix');
+  const [selectedWorkplan, setSelectedWorkplan] = useState<WorkplanType | null>(
+    null
+  );
+  const [viewMode, setViewMode] = useState<"list" | "matrix">("matrix");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [startY, setStartY] = useState(0);
@@ -25,12 +47,18 @@ const Workplan = () => {
   }, []);
 
   const loadData = async () => {
-    console.log('[Workplan] Loading workplans and tasks...');
+    console.log("[Workplan] Loading workplans and tasks...");
     const [workplansData, tasksData] = await Promise.all([
       getWorkplans(),
       getTasks(),
     ]);
-    console.log('[Workplan] Loaded', workplansData.length, 'workplans and', tasksData.length, 'tasks');
+    console.log(
+      "[Workplan] Loaded",
+      workplansData.length,
+      "workplans and",
+      tasksData.length,
+      "tasks"
+    );
     setWorkplans(workplansData);
     setTasks(tasksData);
   };
@@ -67,7 +95,11 @@ const Workplan = () => {
   };
 
   const handleEditTask = (task: Task) => {
-    navigate(`/workplan/task/edit?taskId=${task.id}&workplanId=${selectedWorkplan?.id || ''}`);
+    navigate(
+      `/workplan/task/edit?taskId=${task.id}&workplanId=${
+        selectedWorkplan?.id || ""
+      }`
+    );
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -75,28 +107,45 @@ const Workplan = () => {
     if (selectedWorkplan) {
       const updatedWorkplan = {
         ...selectedWorkplan,
-        tasks: selectedWorkplan.tasks.filter(id => id !== taskId),
+        tasks: selectedWorkplan.tasks.filter((id) => id !== taskId),
       };
       await saveWorkplan(updatedWorkplan);
     }
     await loadData();
-    toast({ title: 'Task deleted' });
+    toast({ title: "Task deleted" });
   };
 
   const workplanTasks = selectedWorkplan
-    ? tasks.filter(t => {
+    ? tasks.filter((t) => {
         const isIncluded = selectedWorkplan.tasks.includes(t.id);
-        console.log('[Workplan] Task', t.id, t.title, 'included in workplan?', isIncluded);
+        console.log(
+          "[Workplan] Task",
+          t.id,
+          t.title,
+          "included in workplan?",
+          isIncluded
+        );
         return isIncluded;
       })
     : tasks; // Show ALL tasks when no workplan is selected
-  
-  console.log('[Workplan] Selected workplan:', selectedWorkplan?.title, 'Task IDs:', selectedWorkplan?.tasks);
-  console.log('[Workplan] All tasks:', tasks.map(t => ({ id: t.id, title: t.title })));
-  console.log('[Workplan] Filtered workplan tasks:', workplanTasks.map(t => ({ id: t.id, title: t.title })));
+
+  console.log(
+    "[Workplan] Selected workplan:",
+    selectedWorkplan?.title,
+    "Task IDs:",
+    selectedWorkplan?.tasks
+  );
+  console.log(
+    "[Workplan] All tasks:",
+    tasks.map((t) => ({ id: t.id, title: t.title }))
+  );
+  console.log(
+    "[Workplan] Filtered workplan tasks:",
+    workplanTasks.map((t) => ({ id: t.id, title: t.title }))
+  );
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -104,20 +153,24 @@ const Workplan = () => {
     >
       {/* Pull to refresh indicator */}
       {pullDistance > 0 && (
-        <div 
+        <div
           className="fixed top-14 left-0 right-0 flex justify-center z-50 transition-opacity"
-          style={{ 
+          style={{
             opacity: pullDistance / 60,
-            transform: `translateY(${Math.min(pullDistance - 20, 40)}px)` 
+            transform: `translateY(${Math.min(pullDistance - 20, 40)}px)`,
           }}
         >
           <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-            <RefreshCw className={`w-4 h-4 ${pullDistance > 60 ? 'animate-spin' : ''}`} />
-            <span className="text-sm">{pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh'}</span>
+            <RefreshCw
+              className={`w-4 h-4 ${pullDistance > 60 ? "animate-spin" : ""}`}
+            />
+            <span className="text-sm">
+              {pullDistance > 60 ? "Release to refresh" : "Pull to refresh"}
+            </span>
           </div>
         </div>
       )}
-      
+
       {isRefreshing && (
         <div className="fixed top-14 left-0 right-0 flex justify-center z-50">
           <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
@@ -126,19 +179,21 @@ const Workplan = () => {
           </div>
         </div>
       )}
-      
+
       <div className="w-full max-w-full px-0 space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Workplans
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Organize your tasks and schedule</p>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Organize your tasks and schedule
+            </p>
           </div>
-          <Button 
-            size="sm" 
-            onClick={() => navigate('/workplan/new')}
-            className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all w-full sm:w-auto touch-manipulation" 
+          <Button
+            size="sm"
+            onClick={() => navigate("/workplan/new")}
+            className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all w-full sm:w-auto touch-manipulation"
             data-tutorial="create-workplan-btn"
           >
             <Plus className="w-4 h-4" />
@@ -160,15 +215,24 @@ const Workplan = () => {
                 <button
                   key={plan.id || `workplan-${index}`}
                   onClick={() => setSelectedWorkplan(plan)}
-                  className={`w-full text-left p-3 rounded-lg transition-all touch-manipulation ${
+                  className={`w-full text-left p-3 rounded-xl transition-all touch-manipulation ${
                     selectedWorkplan?.id === plan.id
-                      ? 'bg-primary text-primary-foreground shadow-md scale-105'
-                      : 'bg-muted hover:bg-muted/80 hover:shadow'
+                      ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/30 scale-[1.02] border-2 border-primary-foreground/20 ring-2 ring-primary/50"
+                      : "bg-card/50 dark:bg-card/30 border-2 border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-md hover:border-primary/50 dark:hover:border-primary/60 hover:-translate-y-0.5"
                   }`}
                 >
-                  <p className="font-medium text-sm sm:text-base">{plan.title}</p>
-                  <p className="text-xs sm:text-sm opacity-80">
-                    {plan.scope} • {format(new Date(plan.startDate), 'MMM d')}
+                  <p className="font-semibold text-sm sm:text-base mb-1">
+                    {plan.title}
+                  </p>
+                  <p
+                    className={`text-xs font-medium ${
+                      selectedWorkplan?.id === plan.id
+                        ? "text-primary-foreground/80"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {plan.scope.toUpperCase()} •{" "}
+                    {format(new Date(plan.startDate), "MMM d, yyyy")}
                   </p>
                 </button>
               ))}
@@ -187,10 +251,14 @@ const Workplan = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-xl sm:text-2xl truncate">
-                      {selectedWorkplan ? selectedWorkplan.title : 'Select a Workplan'}
+                      {selectedWorkplan
+                        ? selectedWorkplan.title
+                        : "Select a Workplan"}
                     </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                      {selectedWorkplan ? `${workplanTasks.length} tasks` : 'Choose a workplan to view tasks'}
+                      {selectedWorkplan
+                        ? `${workplanTasks.length} tasks`
+                        : "Choose a workplan to view tasks"}
                     </CardDescription>
                   </div>
                   {selectedWorkplan && (
@@ -199,28 +267,32 @@ const Workplan = () => {
                       <div className="flex items-center gap-1 bg-muted p-1 rounded-lg flex-1 sm:flex-none">
                         <Button
                           size="sm"
-                          variant={viewMode === 'matrix' ? 'default' : 'ghost'}
+                          variant={viewMode === "matrix" ? "default" : "ghost"}
                           className="gap-1 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation"
-                          onClick={() => setViewMode('matrix')}
+                          onClick={() => setViewMode("matrix")}
                         >
                           <Grid3x3 className="w-4 h-4" />
                           <span className="hidden sm:inline">Matrix</span>
                         </Button>
                         <Button
                           size="sm"
-                          variant={viewMode === 'list' ? 'default' : 'ghost'}
+                          variant={viewMode === "list" ? "default" : "ghost"}
                           className="gap-1 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-none touch-manipulation"
-                          onClick={() => setViewMode('list')}
+                          onClick={() => setViewMode("list")}
                         >
                           <List className="w-4 h-4" />
                           <span className="hidden sm:inline">List</span>
                         </Button>
                       </div>
 
-                      <Button 
-                        size="sm" 
-                        onClick={() => navigate(`/workplan/task/new?workplanId=${selectedWorkplan.id}`)}
-                        className="gap-2 shadow-md flex-1 sm:flex-none touch-manipulation" 
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          navigate(
+                            `/workplan/task/new?workplanId=${selectedWorkplan.id}`
+                          )
+                        }
+                        className="gap-2 shadow-md flex-1 sm:flex-none touch-manipulation"
                         data-tutorial="add-task-btn"
                       >
                         <Plus className="w-4 h-4" />
@@ -232,59 +304,106 @@ const Workplan = () => {
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
                 {selectedWorkplan ? (
-                  viewMode === 'matrix' ? (
+                  viewMode === "matrix" ? (
                     <EisenhowerMatrix
                       tasks={workplanTasks}
                       onEditTask={handleEditTask}
                       onDeleteTask={handleDeleteTask}
                     />
                   ) : (
-                    <div className="space-y-3">
-                      {workplanTasks.map(task => (
+                    <div className="space-y-2">
+                      {workplanTasks.map((task) => (
                         <div
                           key={task.id}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-lg border-2 border-border/60 dark:border-border bg-card dark:bg-card/50 hover:shadow-md hover:border-primary/40 dark:hover:border-primary/60 transition-all group"
+                          className="
+    flex flex-col gap-4 p-4 rounded-2xl border
+    bg-card/60 dark:bg-card/30
+    border-zinc-200 dark:border-zinc-700
+    shadow-sm hover:shadow-md
+    active:scale-[0.99] transition-all
+  "
                         >
+                          {/* Top Row: Priority + Title + Chips */}
                           <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div
-                              className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5"
-                              style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
+                            {/* Priority Color Indicator */}
+                            <span
+                              className="w-3 h-3 rounded-full mt-1 ring-2 ring-white dark:ring-zinc-900"
+                              style={{
+                                backgroundColor: getPriorityColor(
+                                  task.priorityQuadrant
+                                ),
+                              }}
                             />
+
+                            {/* Main Info */}
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm sm:text-base truncate">{task.title}</p>
-                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{task.description}</p>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                {/* Title */}
+                                <p className="font-semibold text-base text-foreground min-w-0">
+                                  {task.title}
+                                </p>
+
+                                {/* Priority Chip */}
                                 <span
-                                  className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap"
+                                  className="px-2 py-0.5 text-xs font-semibold rounded-full uppercase tracking-wide border shadow-sm"
                                   style={{
-                                    backgroundColor: getPriorityColor(task.priorityQuadrant) + '20',
-                                    color: getPriorityColor(task.priorityQuadrant),
+                                    backgroundColor:
+                                      getPriorityColor(task.priorityQuadrant) +
+                                      "25",
+                                    color: getPriorityColor(
+                                      task.priorityQuadrant
+                                    ),
+                                    borderColor:
+                                      getPriorityColor(task.priorityQuadrant) +
+                                      "40",
                                   }}
                                 >
                                   {getPriorityLabel(task.priorityQuadrant)}
                                 </span>
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {task.estimatedTotalTimeMinutes} min
+
+                                {/* Estimated Time Chip */}
+                                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/30 shadow-sm">
+                                  ⏱ {task.estimatedTotalTimeMinutes} min
                                 </span>
                               </div>
+
+                              {/* Description */}
+                              {task.description && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                  {task.description}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          <div className="flex gap-2 ml-7 sm:ml-0">
+
+                          {/* Bottom Action Buttons */}
+                          <div className="flex justify-end gap-3">
+                            {/* Edit Button */}
                             <Button
                               size="sm"
-                              variant="ghost"
                               onClick={() => handleEditTask(task)}
-                              className="touch-target"
+                              className="
+        rounded-lg px-3 py-2 text-xs font-semibold
+        bg-blue-600 text-white
+        hover:bg-blue-700 active:scale-95 shadow-sm
+      "
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-4 h-4 mr-1" />
+                              Edit
                             </Button>
+
+                            {/* Delete Button */}
                             <Button
                               size="sm"
-                              variant="ghost"
                               onClick={() => handleDeleteTask(task.id)}
-                              className="touch-target"
+                              className="
+        rounded-lg px-3 py-2 text-xs font-semibold
+        bg-red-600 text-white
+        hover:bg-red-700 active:scale-95 shadow-sm
+      "
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
                             </Button>
                           </div>
                         </div>
@@ -299,7 +418,9 @@ const Workplan = () => {
                 ) : (
                   <div className="text-center py-8 sm:py-12 text-muted-foreground">
                     <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm sm:text-base">Select a workplan to view and manage tasks</p>
+                    <p className="text-sm sm:text-base">
+                      Select a workplan to view and manage tasks
+                    </p>
                   </div>
                 )}
               </CardContent>
