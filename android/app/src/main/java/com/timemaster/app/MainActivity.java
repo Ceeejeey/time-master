@@ -12,5 +12,8 @@ public class MainActivity extends BridgeActivity {
         // Force hardware acceleration for WebView to reduce input lag
         WebView webView = this.getBridge().getWebView();
         webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
+        
+        // Log for debugging
+        android.util.Log.d("MainActivity", "WebView hardware acceleration enabled");
     }
 }

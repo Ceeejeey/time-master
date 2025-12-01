@@ -1,11 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Play, Trash2, Target, CheckCircle2, Circle, Calendar as CalendarIcon, RotateCcw, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { getWorkplans, saveTodayPlan, clearAllTodayData, getCurrentUserId } from '@/lib/storage';
@@ -28,20 +25,16 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const Today = () => {
+  const navigate = useNavigate();
   const { tasks, sessions, todayPlan: contextTodayPlan, refreshTodayPlan, refreshData } = useData();
   const [workplans, setWorkplans] = useState<Workplan[]>([]);
   const [todayPlan, setTodayPlan] = useState<TodayPlan | null>(null);
-  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
-  const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
   const [targetTimeblocks, setTargetTimeblocks] = useState<number | null>(null);
   const [timeblockDuration, setTimeblockDuration] = useState<number | null>(null);
   const hasInitialized = useRef(false); // Track if values have been initialized
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [startY, setStartY] = useState(0);
-
-  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
-  const [timeblockCount, setTimeblockCount] = useState(1);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const today = format(currentDate, 'yyyy-MM-dd');
@@ -54,12 +47,12 @@ const Today = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync with context - only update todayPlan, not form inputs while user is editing
+  // Sync with context
   useEffect(() => {
     if (contextTodayPlan) {
       setTodayPlan(contextTodayPlan);
-      // Always sync values from database on initial load or when dialog is closed
-      if (!hasInitialized.current || !isGoalDialogOpen) {
+      // Always sync values from database on initial load
+      if (!hasInitialized.current) {
         setTargetTimeblocks(contextTodayPlan.targetTimeblocks);
         setTimeblockDuration(contextTodayPlan.timeblockDuration);
         hasInitialized.current = true;
@@ -85,7 +78,7 @@ const Today = () => {
       };
       createNewPlan();
     }
-  }, [contextTodayPlan, today, refreshTodayPlan, isGoalDialogOpen]);
+  }, [contextTodayPlan, today, refreshTodayPlan]);
 
   useEffect(() => {
     loadData();
@@ -128,63 +121,7 @@ const Today = () => {
     setPullDistance(0);
   };
 
-  const handleSetGoal = async () => {
-    if (!todayPlan || targetTimeblocks === null || timeblockDuration === null) return;
 
-    const updatedPlan = {
-      ...todayPlan,
-      targetTimeblocks,
-      timeblockDuration,
-    };
-
-    setTodayPlan(updatedPlan);
-    await saveTodayPlan(updatedPlan);
-    await refreshTodayPlan();
-    setIsGoalDialogOpen(false);
-    toast({ 
-      title: 'Daily goal updated!',
-      description: `${targetTimeblocks} × ${timeblockDuration} min = ${targetTimeblocks * timeblockDuration} min total`
-    });
-  };
-  
-  const handleOpenGoalDialog = () => {
-    // Load current values from todayPlan when dialog opens
-    if (todayPlan) {
-      setTargetTimeblocks(todayPlan.targetTimeblocks);
-      setTimeblockDuration(todayPlan.timeblockDuration);
-    }
-    setIsGoalDialogOpen(true);
-  };
-
-  const handleAddTask = async () => {
-    if (!todayPlan || !selectedTaskId) return;
-
-    const newTodayTask: TodayTask = {
-      id: `today-task-${Date.now()}`,
-      taskId: selectedTaskId,
-      timeblockCount,
-      completed: false,
-      order: todayPlan.tasks.length,
-    };
-
-    const updatedPlan = {
-      ...todayPlan,
-      tasks: [...todayPlan.tasks, newTodayTask],
-    };
-
-    setTodayPlan(updatedPlan);
-    await saveTodayPlan(updatedPlan);
-    await refreshTodayPlan();
-    setIsAddTaskDialogOpen(false);
-    setSelectedTaskId('');
-    setTimeblockCount(1);
-    
-    const task = tasks.find(t => t.id === selectedTaskId);
-    toast({ 
-      title: 'Task added to today!',
-      description: `${task?.title} - ${timeblockCount} × ${timeblockDuration ?? todayPlan.timeblockDuration} min`
-    });
-  };
 
   const handleRemoveTask = async (todayTaskId: string) => {
     if (!todayPlan) return;
@@ -356,67 +293,15 @@ const Today = () => {
               </AlertDialogContent>
             </AlertDialog>
             
-            <Dialog open={isGoalDialogOpen} onOpenChange={setIsGoalDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  size="sm"
-                  className="gap-2 shadow-lg shadow-primary/20 flex-1 sm:flex-none touch-manipulation"
-                  onClick={handleOpenGoalDialog}
-                >
-                  <Target className="w-4 h-4" />
-                  <span className="sm:inline">Set Goal</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Set Daily Goal</DialogTitle>
-                  <DialogDescription>
-                    Define your timeblock duration and how many you want to complete today
-                  </DialogDescription>
-                </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Timeblock Duration (minutes)</Label>
-                  <Input
-                    type="number"
-                    min="5"
-                    max="120"
-                    step="5"
-                    value={timeblockDuration ?? 25}
-                    onChange={e => setTimeblockDuration(parseInt(e.target.value) || 25)}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Popular choices: 25 (Pomodoro), 50, 90 minutes
-                  </p>
-                </div>
-                <div>
-                  <Label>Target Timeblocks</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={targetTimeblocks ?? 8}
-                    onChange={e => setTargetTimeblocks(parseInt(e.target.value) || 1)}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Recommended: 6-10 timeblocks per day
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                  <p className="text-sm font-medium mb-1">Total Time Goal</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {(targetTimeblocks ?? 8) * (timeblockDuration ?? 25)} minutes
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    = {Math.floor(((targetTimeblocks ?? 8) * (timeblockDuration ?? 25)) / 60)}h {((targetTimeblocks ?? 8) * (timeblockDuration ?? 25)) % 60}m
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleSetGoal}>Set Goal</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            <Button 
+              size="sm"
+              onClick={() => navigate('/today/goal')}
+              className="gap-2 shadow-lg shadow-primary/20 flex-1 sm:flex-none touch-manipulation"
+              data-tutorial="set-goal-btn"
+            >
+              <Target className="w-4 h-4" />
+              <span className="sm:inline">Set Goal</span>
+            </Button>
           </div>
         </div>
 
@@ -474,61 +359,15 @@ const Today = () => {
                   {todayTasks.length} {todayTasks.length === 1 ? 'task' : 'tasks'} planned
                 </CardDescription>
               </div>
-              <Dialog open={isAddTaskDialogOpen} onOpenChange={setIsAddTaskDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2 w-full sm:w-auto touch-manipulation">
-                    <Plus className="w-4 h-4" />
-                    Add Task
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Task to Today</DialogTitle>
-                    <DialogDescription>Choose a task from your workplans and assign timeblocks</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Select Task</Label>
-                      <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a task" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableTasks.map(task => (
-                            <SelectItem key={task.id} value={task.id}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-3 h-3 rounded-full"
-                                  style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
-                                />
-                                {task.title}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Number of Timeblocks</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={timeblockCount}
-                        onChange={e => setTimeblockCount(parseInt(e.target.value) || 1)}
-                      />
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Each timeblock = {timeblockDuration} minutes • Total: {timeblockCount * timeblockDuration} min
-                      </p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button onClick={handleAddTask} disabled={!selectedTaskId}>
-                      Add to Today
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                size="sm" 
+                onClick={() => navigate('/today/task/new')}
+                className="gap-2 w-full sm:w-auto touch-manipulation shadow-md" 
+                data-tutorial="add-today-task-btn"
+              >
+                <Plus className="w-4 h-4" />
+                Add Task
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
@@ -539,7 +378,7 @@ const Today = () => {
                 <p className="text-sm sm:text-base text-muted-foreground mb-4">
                   Add tasks from your workplans to get started
                 </p>
-                <Button size="sm" onClick={() => setIsAddTaskDialogOpen(true)} className="gap-2 touch-manipulation">
+                <Button size="sm" onClick={() => navigate('/today/task/new')} className="gap-2 touch-manipulation">
                   <Plus className="w-4 h-4" />
                   Add Your First Task
                 </Button>

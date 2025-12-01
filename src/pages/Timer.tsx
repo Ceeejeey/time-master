@@ -205,6 +205,7 @@ const Timer = () => {
                 disabled={!selectedTask || !selectedTimeblock}
                 className="w-full gap-2"
                 size="lg"
+                data-tutorial="start-timer-btn"
               >
                 <Play className="w-5 h-5" />
                 Start Timer
@@ -316,7 +317,7 @@ const Timer = () => {
                 {/* Controls */}
                 <div className="flex gap-2 justify-center flex-wrap">
                   {!isPaused ? (
-                    <Button onClick={pauseTimer} variant="outline" size="lg" className="gap-2">
+                    <Button onClick={pauseTimer} variant="outline" size="lg" className="gap-2" data-tutorial="pause-timer-btn">
                       <Pause className="w-5 h-5" />
                       Pause
                     </Button>
@@ -340,6 +341,7 @@ const Timer = () => {
                     variant="destructive"
                     size="lg"
                     className="gap-2"
+                    data-tutorial="stop-timer-btn"
                   >
                     <Square className="w-5 h-5" />
                     Stop

@@ -3,12 +3,49 @@ import { Capacitor } from '@capacitor/core';
 import { DB_NAME, CREATE_TABLES } from './schema';
 
 class DatabaseService {
-  private sqlite: SQLiteConnection;
+  private sqlite: SQLiteConnection | null = null;
   private db: SQLiteDBConnection | null = null;
   private isInitialized = false;
 
   constructor() {
-    this.sqlite = new SQLiteConnection(CapacitorSQLite);
+    // Don't initialize SQLiteConnection here - wait for initialize()
+  }
+
+  private async getSQLiteConnection(): Promise<SQLiteConnection> {
+    if (!this.sqlite) {
+      console.log('[DatabaseService] Creating SQLiteConnection...');
+      
+      // Ensure we're on a platform that supports SQLite
+      const platform = Capacitor.getPlatform();
+      console.log('[DatabaseService] Platform check:', platform);
+      
+      // Check if plugin is available
+      const isAvailable = await Capacitor.isPluginAvailable('CapacitorSQLite');
+      console.log('[DatabaseService] CapacitorSQLite plugin available:', isAvailable);
+      
+      if (!isAvailable) {
+        const error = 'CapacitorSQLite plugin not available. Platform: ' + platform;
+        console.error('[DatabaseService]', error);
+        throw new Error(error);
+      }
+      
+      // Wait for Capacitor to be ready on native platforms
+      if (platform === 'android' || platform === 'ios') {
+        console.log('[DatabaseService] Waiting for native platform to be ready...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      if (!CapacitorSQLite) {
+        const error = 'CapacitorSQLite plugin object is null. Platform: ' + platform;
+        console.error('[DatabaseService]', error);
+        throw new Error(error);
+      }
+      
+      console.log('[DatabaseService] CapacitorSQLite object:', typeof CapacitorSQLite);
+      this.sqlite = new SQLiteConnection(CapacitorSQLite);
+      console.log('[DatabaseService] ✓ SQLiteConnection created');
+    }
+    return this.sqlite;
   }
 
   async initialize(): Promise<void> {
@@ -21,18 +58,24 @@ class DatabaseService {
       const platform = Capacitor.getPlatform();
       console.log('[DatabaseService] Initializing database on platform:', platform);
 
+      // Get or create SQLiteConnection (now returns Promise)
+      const sqlite = await this.getSQLiteConnection();
+
       if (platform === 'web') {
-        // For web, use jeepq/sqlite plugin
-        await customElements.whenDefined('jeep-sqlite');
+        // For web, check if jeep-sqlite is available
         const jeepSqliteEl = document.querySelector('jeep-sqlite');
         if (jeepSqliteEl) {
-          await this.sqlite.initWebStore();
+          console.log('[DatabaseService] Initializing web store...');
+          await sqlite.initWebStore();
+          console.log('[DatabaseService] ✓ Web store initialized');
+        } else {
+          console.warn('[DatabaseService] jeep-sqlite not found, skipping web store init');
         }
       }
 
       // Create database connection
       console.log('[DatabaseService] Creating connection to:', DB_NAME);
-      this.db = await this.sqlite.createConnection(
+      this.db = await sqlite.createConnection(
         DB_NAME,
         false, // encrypted
         'no-encryption',

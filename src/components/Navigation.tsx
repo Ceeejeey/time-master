@@ -114,6 +114,7 @@ const Navigation = () => {
               to={item.to}
               className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all min-w-[60px]"
               activeClassName="text-primary bg-primary/10 font-medium"
+              data-tutorial={item.to === '/today' ? 'today-nav' : item.to === '/reports' ? 'reports-nav' : undefined}
             >
               <item.icon className="w-5 h-5" />
               <span className="text-[10px] font-medium">{item.label}</span>

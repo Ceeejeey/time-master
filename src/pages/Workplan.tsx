@@ -1,44 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Edit2, Calendar, Grid3x3, List, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { getTasks, getWorkplans, saveTask, saveWorkplan, deleteTask, getCurrentUserId } from '@/lib/storage';
-import { Task, WorkplanScope, PriorityQuadrant } from '@/lib/types';
-import type { Workplan } from '@/lib/types';
+import { getTasks, getWorkplans, saveWorkplan, deleteTask, getCurrentUserId } from '@/lib/storage';
+import { Task, Workplan as WorkplanType } from '@/lib/types';
 import { format } from 'date-fns';
-import { getPriorityLabel, getPriorityColor, PRIORITY_QUADRANTS } from '@/lib/priority';
+import { getPriorityLabel, getPriorityColor } from '@/lib/priority';
 import { toast } from '@/hooks/use-toast';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
 
 const Workplan = () => {
-  const [workplans, setWorkplans] = useState<Workplan[]>([]);
+  const navigate = useNavigate();
+  const [workplans, setWorkplans] = useState<WorkplanType[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedWorkplan, setSelectedWorkplan] = useState<Workplan | null>(null);
-  const [isWorkplanDialogOpen, setIsWorkplanDialogOpen] = useState(false);
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [selectedWorkplan, setSelectedWorkplan] = useState<WorkplanType | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'matrix'>('matrix');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [startY, setStartY] = useState(0);
-
-  const [workplanForm, setWorkplanForm] = useState({
-    title: '',
-    scope: 'day' as WorkplanScope,
-    startDate: format(new Date(), 'yyyy-MM-dd'),
-  });
-
-  const [taskForm, setTaskForm] = useState({
-    title: '',
-    description: '',
-    priorityQuadrant: 'essential_not_immediate' as PriorityQuadrant,
-    estimatedTotalTimeMinutes: 30,
-  });
 
   useEffect(() => {
     loadData();
@@ -86,76 +66,8 @@ const Workplan = () => {
     setPullDistance(0);
   };
 
-  const handleCreateWorkplan = async () => {
-    const userId = getCurrentUserId();
-    const newWorkplan: Workplan = {
-      id: `workplan-${Date.now()}`,
-      userId,
-      title: workplanForm.title,
-      scope: workplanForm.scope,
-      startDate: workplanForm.startDate,
-      endDate: workplanForm.startDate, // Simplified for now
-      tasks: [],
-    };
-
-    await saveWorkplan(newWorkplan);
-    await loadData();
-    setIsWorkplanDialogOpen(false);
-    setWorkplanForm({ title: '', scope: 'day', startDate: format(new Date(), 'yyyy-MM-dd') });
-    toast({ title: 'Workplan created successfully' });
-  };
-
-  const handleCreateTask = async () => {
-    const userId = getCurrentUserId();
-    const newTask: Task = {
-      id: editingTask?.id || `task-${Date.now()}`,
-      userId,
-      title: taskForm.title,
-      description: taskForm.description,
-      priorityQuadrant: taskForm.priorityQuadrant,
-      estimatedTotalTimeMinutes: taskForm.estimatedTotalTimeMinutes,
-      assignedTimeblocks: [],
-      metadata: {},
-    };
-
-    console.log('[Workplan] Saving task:', newTask.title, 'with temp ID:', newTask.id);
-    const savedTaskId = await saveTask(newTask);
-    console.log('[Workplan] Task saved with actual ID:', savedTaskId);
-
-    if (selectedWorkplan && !editingTask) {
-      console.log('[Workplan] Adding task to workplan:', selectedWorkplan.title);
-      const updatedWorkplan = {
-        ...selectedWorkplan,
-        tasks: [...selectedWorkplan.tasks, savedTaskId],
-      };
-      console.log('[Workplan] Updated workplan tasks:', updatedWorkplan.tasks);
-      await saveWorkplan(updatedWorkplan);
-      
-      // Update local state immediately
-      setSelectedWorkplan(updatedWorkplan);
-    }
-
-    await loadData();
-    setIsTaskDialogOpen(false);
-    setEditingTask(null);
-    setTaskForm({
-      title: '',
-      description: '',
-      priorityQuadrant: 'essential_not_immediate',
-      estimatedTotalTimeMinutes: 30,
-    });
-    toast({ title: editingTask ? 'Task updated' : 'Task created successfully' });
-  };
-
   const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setTaskForm({
-      title: task.title,
-      description: task.description,
-      priorityQuadrant: task.priorityQuadrant,
-      estimatedTotalTimeMinutes: task.estimatedTotalTimeMinutes,
-    });
-    setIsTaskDialogOpen(true);
+    navigate(`/workplan/task/edit?taskId=${task.id}&workplanId=${selectedWorkplan?.id || ''}`);
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -223,59 +135,15 @@ const Workplan = () => {
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground">Organize your tasks and schedule</p>
           </div>
-          <Dialog open={isWorkplanDialogOpen} onOpenChange={setIsWorkplanDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all w-full sm:w-auto touch-manipulation">
-                <Plus className="w-4 h-4" />
-                New Workplan
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Workplan</DialogTitle>
-                <DialogDescription>Plan your day, week, or month</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Title</Label>
-                  <Input
-                    value={workplanForm.title}
-                    onChange={e => setWorkplanForm({ ...workplanForm, title: e.target.value })}
-                    placeholder="e.g., Monday Sprint"
-                  />
-                </div>
-                <div>
-                  <Label>Scope</Label>
-                  <Select
-                    value={workplanForm.scope}
-                    onValueChange={(value: WorkplanScope) =>
-                      setWorkplanForm({ ...workplanForm, scope: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="day">Day</SelectItem>
-                      <SelectItem value="week">Week</SelectItem>
-                      <SelectItem value="month">Month</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={workplanForm.startDate}
-                    onChange={e => setWorkplanForm({ ...workplanForm, startDate: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCreateWorkplan}>Create Workplan</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            size="sm" 
+            onClick={() => navigate('/workplan/new')}
+            className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all w-full sm:w-auto touch-manipulation" 
+            data-tutorial="create-workplan-btn"
+          >
+            <Plus className="w-4 h-4" />
+            New Workplan
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -349,72 +217,15 @@ const Workplan = () => {
                         </Button>
                       </div>
 
-                      <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" className="gap-2 shadow-md flex-1 sm:flex-none touch-manipulation">
-                            <Plus className="w-4 h-4" />
-                            <span className="sm:inline">Add Task</span>
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{editingTask ? 'Edit Task' : 'Create Task'}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label>Title</Label>
-                              <Input
-                                value={taskForm.title}
-                                onChange={e => setTaskForm({ ...taskForm, title: e.target.value })}
-                                placeholder="Task name"
-                              />
-                            </div>
-                            <div>
-                              <Label>Description</Label>
-                              <Textarea
-                                value={taskForm.description}
-                                onChange={e => setTaskForm({ ...taskForm, description: e.target.value })}
-                                placeholder="Task details"
-                              />
-                            </div>
-                            <div>
-                              <Label>Priority Quadrant</Label>
-                              <Select
-                                value={taskForm.priorityQuadrant}
-                                onValueChange={(value: PriorityQuadrant) =>
-                                  setTaskForm({ ...taskForm, priorityQuadrant: value })
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {PRIORITY_QUADRANTS.map(q => (
-                                    <SelectItem key={q} value={q}>
-                                      {getPriorityLabel(q)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label>Estimated Time (minutes)</Label>
-                              <Input
-                                type="number"
-                                value={taskForm.estimatedTotalTimeMinutes}
-                                onChange={e =>
-                                  setTaskForm({ ...taskForm, estimatedTotalTimeMinutes: parseInt(e.target.value) || 0 })
-                                }
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button onClick={handleCreateTask}>
-                              {editingTask ? 'Update' : 'Create'} Task
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        size="sm" 
+                        onClick={() => navigate(`/workplan/task/new?workplanId=${selectedWorkplan.id}`)}
+                        className="gap-2 shadow-md flex-1 sm:flex-none touch-manipulation" 
+                        data-tutorial="add-task-btn"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span className="sm:inline">Add Task</span>
+                      </Button>
                     </div>
                   )}
                 </div>

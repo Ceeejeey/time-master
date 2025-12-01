@@ -1,5 +1,5 @@
 import { db } from '../database';
-import { User, Task, Workplan, Timeblock, TimerSession, TodayPlan } from './types';
+import { User, Task, Workplan, Timeblock, TimerSession, TodayPlan, PriorityQuadrant } from './types';
 
 // User Profile
 export const getUser = async (): Promise<User | null> => {
@@ -23,20 +23,30 @@ export const getUser = async (): Promise<User | null> => {
 
 export const saveUser = async (user: User): Promise<void> => {
   try {
+    console.log('[Storage] saveUser called for:', user.name);
+    
     const existing = await getUser();
+    console.log('[Storage] Existing user check:', existing ? 'Found' : 'None');
+    
     if (existing) {
-      await db.run(
+      console.log('[Storage] Updating existing user...');
+      const result = await db.run(
         'UPDATE user_profile SET username = ? WHERE id = ?',
         [user.name, existing.id]
       );
+      console.log('[Storage] Update result:', result);
     } else {
-      await db.run(
+      console.log('[Storage] Inserting new user...');
+      const result = await db.run(
         'INSERT INTO user_profile (username, profilePic) VALUES (?, ?)',
         [user.name, '']
       );
+      console.log('[Storage] Insert result:', result);
     }
+    
+    console.log('[Storage] ✓ User saved successfully');
   } catch (error) {
-    console.error('Error saving user:', error);
+    console.error('[Storage] ✗ Error saving user:', error);
     throw error;
   }
 };
@@ -69,6 +79,28 @@ export const getTasks = async (): Promise<Task[]> => {
   } catch (error) {
     console.error('Error getting tasks:', error);
     return [];
+  }
+};
+
+export const getTask = async (taskId: string): Promise<Task | null> => {
+  try {
+    const result = await db.query('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    if (!result.values || result.values.length === 0) return null;
+    
+    const row = result.values[0];
+    return {
+      id: row.id.toString(),
+      userId: '1',
+      title: row.title as string,
+      description: row.description as string || '',
+      priorityQuadrant: (row.priorityQuadrant as string || 'not_essential_not_immediate') as PriorityQuadrant,
+      assignedTimeblocks: [],
+      estimatedTotalTimeMinutes: row.estimatedTotalTimeMinutes as number || 0,
+      metadata: row.metadata ? JSON.parse(row.metadata as string) : {}
+    };
+  } catch (error) {
+    console.error('Error getting task:', error);
+    return null;
   }
 };
 
@@ -142,7 +174,9 @@ export const getWorkplans = async (): Promise<Workplan[]> => {
     
     const workplans = result.values.map((row: Record<string, unknown>) => {
       const tasks = row.tasks ? JSON.parse(row.tasks as string) : [];
-      console.log('[Storage] Workplan:', row.title, 'has tasks:', tasks);
+      // Ensure all task IDs are strings
+      const taskIds = tasks.map((id: string | number) => String(id));
+      console.log('[Storage] Workplan:', row.title, 'has tasks:', taskIds);
       return {
         id: row.id.toString(),
         userId: '1',
@@ -150,7 +184,7 @@ export const getWorkplans = async (): Promise<Workplan[]> => {
         scope: row.scope as 'day' | 'week' | 'month',
         startDate: row.startDate as string,
         endDate: row.endDate as string,
-        tasks: tasks
+        tasks: taskIds
       };
     });
     
