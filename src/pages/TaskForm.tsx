@@ -18,6 +18,41 @@ const TaskForm = () => {
   const workplanId = searchParams.get('workplanId');
   const mode = taskId ? 'edit' : 'create';
 
+  // Debug: Log mount and check for scroll blockers
+  useEffect(() => {
+    console.log('[TaskForm] Component mounted');
+    console.log('[TaskForm] Document body overflow:', window.getComputedStyle(document.body).overflow);
+    console.log('[TaskForm] Document body overflowY:', window.getComputedStyle(document.body).overflowY);
+    console.log('[TaskForm] HTML overflow:', window.getComputedStyle(document.documentElement).overflow);
+    console.log('[TaskForm] HTML overflowY:', window.getComputedStyle(document.documentElement).overflowY);
+    
+    // Check for any elements with pointer-events: none or touch-action: none
+    const root = document.getElementById('root');
+    if (root) {
+      console.log('[TaskForm] #root overflow:', window.getComputedStyle(root).overflow);
+      console.log('[TaskForm] #root pointerEvents:', window.getComputedStyle(root).pointerEvents);
+      console.log('[TaskForm] #root touchAction:', window.getComputedStyle(root).touchAction);
+    }
+    
+    // Check for fixed/absolute positioned overlays
+    const allElements = document.querySelectorAll('*');
+    let overlaysFound = 0;
+    allElements.forEach(el => {
+      const style = window.getComputedStyle(el);
+      if ((style.position === 'fixed' || style.position === 'absolute') && 
+          parseInt(style.zIndex) > 50 && 
+          style.display !== 'none') {
+        overlaysFound++;
+        console.log('[TaskForm] Overlay element found:', el.tagName, el.className, 'z-index:', style.zIndex);
+      }
+    });
+    console.log('[TaskForm] Total overlays with z-index > 50:', overlaysFound);
+    
+    return () => {
+      console.log('[TaskForm] Component unmounting');
+    };
+  }, []);
+
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -54,6 +89,12 @@ const TaskForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('[TaskForm] === SUBMIT START ===');
+    console.log('[TaskForm] mode:', mode);
+    console.log('[TaskForm] taskId:', taskId);
+    console.log('[TaskForm] workplanId:', workplanId);
+    console.log('[TaskForm] form:', form);
+    
     if (!form.title.trim()) {
       toast({ title: 'Please enter a task title', variant: 'destructive' });
       return;
@@ -62,6 +103,8 @@ const TaskForm = () => {
     setIsSaving(true);
     try {
       const userId = getCurrentUserId();
+      console.log('[TaskForm] userId:', userId);
+      
       const newTask: Task = {
         id: taskId || `task-${Date.now()}`,
         userId,
@@ -72,23 +115,34 @@ const TaskForm = () => {
         assignedTimeblocks: [],
         metadata: {},
       };
+      console.log('[TaskForm] newTask:', newTask);
 
       // Save task and get the actual ID from database
       const actualTaskId = await saveTask(newTask);
-      console.log('[TaskForm] Task saved with ID:', actualTaskId);
+      console.log('[TaskForm] Task saved with actualTaskId:', actualTaskId);
       
       // If creating a new task (not editing) and workplanId is provided, add task to workplan
       if (!taskId && workplanId) {
+        console.log('[TaskForm] Adding task to workplan...');
         const workplans = await getWorkplans();
+        console.log('[TaskForm] All workplans:', workplans.map(w => ({ id: w.id, title: w.title, tasks: w.tasks })));
+        
         const workplan = workplans.find(w => w.id === workplanId);
+        console.log('[TaskForm] Found workplan:', workplan);
+        
         if (workplan) {
           const updatedWorkplan = {
             ...workplan,
             tasks: [...workplan.tasks, actualTaskId],
           };
+          console.log('[TaskForm] Updated workplan with tasks:', updatedWorkplan.tasks);
           await saveWorkplan(updatedWorkplan);
-          console.log('[TaskForm] Added task', actualTaskId, 'to workplan:', workplanId);
+          console.log('[TaskForm] ✓ Workplan saved!');
+        } else {
+          console.log('[TaskForm] ⚠ Workplan NOT FOUND for id:', workplanId);
         }
+      } else {
+        console.log('[TaskForm] Skipping workplan update. taskId:', taskId, 'workplanId:', workplanId);
       }
       
       toast({ title: mode === 'edit' ? 'Task updated successfully' : 'Task created successfully' });
@@ -102,6 +156,7 @@ const TaskForm = () => {
       } else {
         navigate('/workplan', { replace: true });
       }
+
     } catch (error) {
       console.error('[TaskForm] Error saving task:', error);
       toast({ title: 'Failed to save task', variant: 'destructive' });
@@ -156,10 +211,11 @@ const TaskForm = () => {
               id="title"
               value={form.title}
               onChange={e => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g., Complete project proposal"
+              placeholder="e.g., Write project proposal"
               className="h-12 text-base"
               autoFocus
               maxLength={200}
+              data-tutorial="task-title-input"
             />
             <p className="text-xs text-muted-foreground">
               What needs to be done?

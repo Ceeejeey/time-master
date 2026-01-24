@@ -15,12 +15,15 @@ import Workplan from "./pages/Workplan";
 import Timer from "./pages/Timer";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import TutorialDocs from "./pages/TutorialDocs";
 import NotFound from "./pages/NotFound";
 import WorkplanForm from "./pages/WorkplanForm";
 import TaskForm from "./pages/TaskForm";
 import TodayGoalForm from "./pages/TodayGoalForm";
 import TodayTaskForm from "./pages/TodayTaskForm";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Navigation from "./components/Navigation";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +54,7 @@ const AppContent = () => {
   return (
     <DataProvider>
       <Navigation />
-      <main className="pt-14 pb-16 min-h-screen overflow-x-hidden">
+      <main className="pt-14 pb-16 min-h-screen">
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/today" element={<Today />} />
@@ -64,6 +67,7 @@ const AppContent = () => {
           <Route path="/timer" element={<Timer />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/tutorial-docs" element={<TutorialDocs />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
@@ -74,24 +78,27 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <TutorialProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true,
-              }}
-            >
-              <AppContent />
-            </BrowserRouter>
-          </TutorialProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <TutorialProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true,
+                }}
+              >
+                <ScrollToTop />
+                <AppContent />
+              </BrowserRouter>
+            </TutorialProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { saveUser } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { ArrowRight, Clock, Target, TrendingUp, Sparkles } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { db } from '@/database';
@@ -15,6 +16,7 @@ export const OnboardingScreen: React.FC = () => {
   const [animationData, setAnimationData] = useState<object | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const { refreshUser } = useAuth();
+  const { startTutorial } = useTutorial();
 
   // Load premium Lottie animation from URL
   useEffect(() => {
@@ -183,9 +185,13 @@ export const OnboardingScreen: React.FC = () => {
       // Mark that user has completed onboarding
       localStorage.setItem('timemaster_has_user', 'true');
       
-      console.log('[Onboarding] Step 6: Refreshing auth state...');
+      console.log('[Onboarding] Step 6: Starting tutorial...');
+      startTutorial();
+      
+      console.log('[Onboarding] Step 7: Refreshing auth state...');
       // Refresh auth state to trigger navigation to home
       await refreshUser();
+      
       console.log('[Onboarding] ✓ Complete! Redirecting to app...');
     } catch (error) {
       console.error('[Onboarding] ✗ Error during onboarding:', error);

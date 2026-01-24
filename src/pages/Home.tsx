@@ -7,10 +7,12 @@ import { getTodayReport } from '@/lib/reports';
 import { format } from 'date-fns';
 import { getPriorityLabel, getPriorityColor } from '@/lib/priority';
 import { formatTimeHMS } from '@/lib/utils';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { useData } from '@/contexts/DataContext';
 
 const Home = () => {
   const { tasks, sessions, todayPlan, refreshData } = useData();
+  const { handleAction } = useTutorial();
   const [report, setReport] = useState({
     totalWorkTime: 0,
     totalWastedTime: 0,
@@ -334,7 +336,7 @@ const Home = () => {
             </Card>
           </Link>
 
-          <Link to="/workplan" className="block group">
+          <Link to="/workplan" className="block group" onClick={() => handleAction('nav-workplan')}>
             <Card className="h-full hover:shadow-2xl transition-all cursor-pointer border-2 border-secondary/30 dark:border-secondary/50 hover:border-secondary/50 dark:hover:border-secondary/70 bg-gradient-to-br from-background dark:from-background/50 to-secondary/10 dark:to-secondary/20 touch-manipulation">
               <CardHeader className="p-4 sm:p-6">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-secondary/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">

@@ -199,10 +199,15 @@ export const getWorkplans = async (): Promise<Workplan[]> => {
 export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
   try {
     const tasks = JSON.stringify(workplan.tasks || []);
-    console.log('[Storage] Saving workplan:', workplan.title, 'with tasks:', workplan.tasks);
+    console.log('[Storage] === SAVING WORKPLAN ===');
+    console.log('[Storage] Workplan ID:', workplan.id);
+    console.log('[Storage] Workplan title:', workplan.title);
+    console.log('[Storage] Tasks array:', workplan.tasks);
+    console.log('[Storage] Tasks JSON:', tasks);
     
     // Check if workplan exists by querying the database
     const existing = workplan.id ? await db.query('SELECT id FROM workplans WHERE id = ?', [workplan.id]) : null;
+    console.log('[Storage] Existing workplan query result:', existing?.values);
     const workplanExists = existing?.values && existing.values.length > 0;
     
     if (workplanExists) {
@@ -226,7 +231,7 @@ export const saveWorkplan = async (workplan: Workplan): Promise<void> => {
       console.log('[Storage] ✓ Workplan inserted');
     }
   } catch (error) {
-    console.error('Error saving workplan:', error);
+    console.error('[Storage] Error saving workplan:', error);
     throw error;
   }
 };
@@ -459,3 +464,70 @@ export const initializeDefaultData = async (): Promise<void> => {
 
 // Helper for getting current user ID (always returns '1' for local-only app)
 export const getCurrentUserId = (): string => '1';
+
+// Tutorial Progress Functions
+export interface TutorialProgress {
+  id?: string;
+  tutorialStarted: boolean;
+  tutorialCompleted: boolean;
+  currentStep: number;
+  completedSteps: number[];
+  lastUpdatedTimestamp: string;
+}
+
+export const getTutorialProgress = async (): Promise<TutorialProgress | null> => {
+  try {
+    const result = await db.query('SELECT * FROM tutorial_progress LIMIT 1');
+    if (!result.values || result.values.length === 0) {
+      return null;
+    }
+    
+    const row = result.values[0];
+    return {
+      id: row.id.toString(),
+      tutorialStarted: row.tutorialStarted === 1,
+      tutorialCompleted: row.tutorialCompleted === 1,
+      currentStep: row.currentStep as number || 0,
+      completedSteps: row.completedSteps ? JSON.parse(row.completedSteps as string) : [],
+      lastUpdatedTimestamp: row.lastUpdatedTimestamp as string
+    };
+  } catch (error) {
+    console.error('Error getting tutorial progress:', error);
+    return null;
+  }
+};
+
+export const saveTutorialProgress = async (progress: TutorialProgress): Promise<void> => {
+  try {
+    const existing = await getTutorialProgress();
+    const completedSteps = JSON.stringify(progress.completedSteps);
+    const timestamp = new Date().toISOString();
+    
+    if (existing) {
+      await db.run(
+        `UPDATE tutorial_progress SET 
+          tutorialStarted = ?, tutorialCompleted = ?, currentStep = ?, completedSteps = ?, lastUpdatedTimestamp = ?
+        WHERE id = ?`,
+        [progress.tutorialStarted ? 1 : 0, progress.tutorialCompleted ? 1 : 0, progress.currentStep, completedSteps, timestamp, existing.id]
+      );
+    } else {
+      await db.run(
+        `INSERT INTO tutorial_progress (tutorialStarted, tutorialCompleted, currentStep, completedSteps, lastUpdatedTimestamp)
+         VALUES (?, ?, ?, ?, ?)`,
+        [progress.tutorialStarted ? 1 : 0, progress.tutorialCompleted ? 1 : 0, progress.currentStep, completedSteps, timestamp]
+      );
+    }
+  } catch (error) {
+    console.error('Error saving tutorial progress:', error);
+    throw error;
+  }
+};
+
+export const resetTutorialProgress = async (): Promise<void> => {
+  try {
+    await db.run('DELETE FROM tutorial_progress');
+  } catch (error) {
+    console.error('Error resetting tutorial progress:', error);
+    throw error;
+  }
+};

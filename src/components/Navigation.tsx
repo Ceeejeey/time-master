@@ -2,6 +2,7 @@ import { Home, Calendar, Clock, BarChart3, Settings, Moon, Sun, Monitor, Calenda
 import { NavLink } from './NavLink';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTutorial } from '@/contexts/TutorialContext';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 const Navigation = () => {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
+  const { handleAction } = useTutorial();
 
   const getUserInitials = () => {
     if (!user?.name) return 'U';
@@ -27,11 +29,11 @@ const Navigation = () => {
   };
 
   const navItems = [
-    { to: '/', icon: Home, label: 'Home' },
-    { to: '/today', icon: CalendarCheck, label: 'Today' },
-    { to: '/workplan', icon: Calendar, label: 'Plan' },
-    { to: '/timer', icon: Clock, label: 'Timer' },
-    { to: '/reports', icon: BarChart3, label: 'Reports' },
+    { to: '/', icon: Home, label: 'Home', tutorial: undefined, action: undefined, id: 'nav-home' },
+    { to: '/today', icon: CalendarCheck, label: 'Today', tutorial: 'nav-today-card', action: 'nav-today', id: 'today-nav' },
+    { to: '/workplan', icon: Calendar, label: 'Plan', tutorial: 'nav-workplan-tab', action: 'nav-workplan', id: 'nav-workplan-tab' },
+    { to: '/timer', icon: Clock, label: 'Timer', tutorial: 'nav-timer-card', action: 'nav-timer', id: 'nav-timer' },
+    { to: '/reports', icon: BarChart3, label: 'Reports', tutorial: 'nav-reports-card', action: 'nav-reports', id: 'nav-reports' },
   ];
 
   return (
@@ -112,9 +114,11 @@ const Navigation = () => {
             <NavLink
               key={item.to}
               to={item.to}
+              id={item.id}
               className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all min-w-[60px]"
               activeClassName="text-primary bg-primary/10 font-medium"
-              data-tutorial={item.to === '/today' ? 'today-nav' : item.to === '/reports' ? 'reports-nav' : undefined}
+              data-tutorial={item.tutorial}
+              onClick={() => item.action && handleAction(item.action)}
             >
               <item.icon className="w-5 h-5" />
               <span className="text-[10px] font-medium">{item.label}</span>

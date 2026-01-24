@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   Trash2,
@@ -29,9 +29,12 @@ import { format } from "date-fns";
 import { getPriorityLabel, getPriorityColor } from "@/lib/priority";
 import { toast } from "@/hooks/use-toast";
 import { EisenhowerMatrix } from "@/components/EisenhowerMatrix";
+import { useTutorial } from "@/contexts/TutorialContext";
 
 const Workplan = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { handleAction } = useTutorial();
   const [workplans, setWorkplans] = useState<WorkplanType[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedWorkplan, setSelectedWorkplan] = useState<WorkplanType | null>(
@@ -42,11 +45,7 @@ const Workplan = () => {
   const [pullDistance, setPullDistance] = useState(0);
   const [startY, setStartY] = useState(0);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     console.log("[Workplan] Loading workplans and tasks...");
     const [workplansData, tasksData] = await Promise.all([
       getWorkplans(),
@@ -61,7 +60,20 @@ const Workplan = () => {
     );
     setWorkplans(workplansData);
     setTasks(tasksData);
-  };
+
+    // Auto-select workplan if ID is provided in URL
+    const selectedId = searchParams.get('selected');
+    if (selectedId) {
+      const found = workplansData.find(w => w.id === selectedId);
+      if (found) {
+        setSelectedWorkplan(found);
+      }
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]); // Reload when loadData changes
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -192,7 +204,10 @@ const Workplan = () => {
           </div>
           <Button
             size="sm"
-            onClick={() => navigate("/workplan/new")}
+            onClick={() => {
+              handleAction('click-create-workplan');
+              navigate("/workplan/new");
+            }}
             className="gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all w-full sm:w-auto touch-manipulation"
             data-tutorial="create-workplan-btn"
           >
@@ -214,7 +229,11 @@ const Workplan = () => {
               {workplans.map((plan, index) => (
                 <button
                   key={plan.id || `workplan-${index}`}
-                  onClick={() => setSelectedWorkplan(plan)}
+                  onClick={() => {
+                    handleAction('select-workplan');
+                    setSelectedWorkplan(plan);
+                  }}
+                  data-tutorial="workplan-list-item"
                   className={`w-full text-left p-3 rounded-xl transition-all touch-manipulation ${
                     selectedWorkplan?.id === plan.id
                       ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/30 scale-[1.02] border-2 border-primary-foreground/20 ring-2 ring-primary/50"
@@ -287,13 +306,14 @@ const Workplan = () => {
 
                       <Button
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
+                          handleAction('click-add-task');
                           navigate(
                             `/workplan/task/new?workplanId=${selectedWorkplan.id}`
-                          )
-                        }
+                          );
+                        }}
                         className="gap-2 shadow-md flex-1 sm:flex-none touch-manipulation"
-                        data-tutorial="add-task-btn"
+                        data-tutorial="add-workplan-task"
                       >
                         <Plus className="w-4 h-4" />
                         <span className="sm:inline">Add Task</span>
@@ -305,13 +325,15 @@ const Workplan = () => {
               <CardContent className="p-4 sm:p-6">
                 {selectedWorkplan ? (
                   viewMode === "matrix" ? (
-                    <EisenhowerMatrix
-                      tasks={workplanTasks}
-                      onEditTask={handleEditTask}
-                      onDeleteTask={handleDeleteTask}
-                    />
+                    <div data-tutorial="workplan-item" onClick={() => handleAction('view-matrix')}>
+                      <EisenhowerMatrix
+                        tasks={workplanTasks}
+                        onEditTask={handleEditTask}
+                        onDeleteTask={handleDeleteTask}
+                      />
+                    </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2" data-tutorial="workplan-item">
                       {workplanTasks.map((task) => (
                         <div
                           key={task.id}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   Play,
@@ -50,9 +50,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useTutorial } from "@/contexts/TutorialContext";
 
 const Today = () => {
   const navigate = useNavigate();
+  const { handleAction } = useTutorial();
   const {
     tasks,
     sessions,
@@ -342,9 +344,12 @@ const Today = () => {
 
             <Button
               size="sm"
-              onClick={() => navigate("/today/goal")}
+              onClick={() => {
+                handleAction('click-set-goal');
+                navigate("/today/goal");
+              }}
               className="gap-2 shadow-lg shadow-primary/20 flex-1 sm:flex-none touch-manipulation"
-              data-tutorial="set-goal-btn"
+              data-tutorial="today-goal-card"
             >
               <Target className="w-4 h-4" />
               <span className="sm:inline">Set Goal</span>
@@ -427,9 +432,12 @@ const Today = () => {
               </div>
               <Button
                 size="sm"
-                onClick={() => navigate("/today/task/new")}
+                onClick={() => {
+                  handleAction('click-add-today-task');
+                  navigate("/today/task/new");
+                }}
                 className="gap-2 w-full sm:w-auto touch-manipulation shadow-md"
-                data-tutorial="add-today-task-btn"
+                data-tutorial="add-today-task"
               >
                 <Plus className="w-4 h-4" />
                 Add Task
@@ -448,7 +456,10 @@ const Today = () => {
                 </p>
                 <Button
                   size="sm"
-                  onClick={() => navigate("/today/task/new")}
+                  onClick={() => {
+                    handleAction('click-add-today-task');
+                    navigate("/today/task/new");
+                  }}
                   className="gap-2 touch-manipulation"
                 >
                   <Plus className="w-4 h-4" />
@@ -585,15 +596,18 @@ const Today = () => {
                       {/* Bottom Actions */}
                       <div className="flex items-center gap-2 mt-4">
                         {!todayTask.completed && (
-                          <Link
-                            to={`/timer?taskId=${task.id}`}
-                            className="flex-1"
+                          <Button
+                            size="sm"
+                            className="flex-1 gap-2"
+                            onClick={() => {
+                              handleAction('click-start-task-today');
+                              navigate(`/timer?taskId=${task.id}`);
+                            }}
+                            data-tutorial="start-task-button"
                           >
-                            <Button size="sm" className="w-full gap-2">
-                              <Play className="w-4 h-4" />
-                              Start
-                            </Button>
-                          </Link>
+                            <Play className="w-4 h-4" />
+                            Start
+                          </Button>
                         )}
 
                         <Button

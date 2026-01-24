@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Clock, Palette, Download, Upload } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings as SettingsIcon, Clock, Palette, Download, Upload, GraduationCap, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +9,14 @@ import { Switch } from '@/components/ui/switch';
 import { getUser, saveUser, getTimeblocks, saveTimeblock } from '@/lib/storage';
 import { User, Timeblock } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
+import { useTutorial } from '@/contexts/TutorialContext';
 
 const Settings = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [timeblocks, setTimeblocks] = useState<Timeblock[]>([]);
   const [newBlockDuration, setNewBlockDuration] = useState(25);
+  const { resetTutorial, startTutorial } = useTutorial();
 
   useEffect(() => {
     const loadData = async () => {
@@ -199,6 +203,61 @@ const Settings = () => {
               <Upload className="w-4 h-4" />
               Import Data
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Tutorial Management */}
+        <Card className="border-2 border-secondary/30 dark:border-secondary/50 bg-gradient-to-br from-secondary/10 dark:from-secondary/20 to-primary/10 dark:to-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-secondary" />
+              Interactive Tutorial
+            </CardTitle>
+            <CardDescription>
+              Learn how to use TimeMaster with our step-by-step guide
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm">
+                The tutorial will guide you through creating workplans, adding tasks, setting daily goals, and tracking your time.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => {
+                    import('react-router-dom').then(({ useNavigate }) => {
+                       // This is a bit hacky inside onClick, better to use hook at top level
+                       // But since we are editing Settings.tsx which already has hooks... wait.
+                    });
+                    startTutorial();
+                    toast({ title: 'Tutorial started!', description: 'Follow the interactive guide to learn TimeMaster.' });
+                  }}
+                  className="gap-2 flex-1"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  Interactive Tutorial
+                </Button>
+                <Button
+                    variant="outline"
+                    className="gap-2 flex-1"
+                    onClick={() => navigate('/tutorial-docs')}
+                >
+                    <BookOpen className="w-4 h-4" />
+                    Read Guide
+                </Button>
+              </div>
+              <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    await resetTutorial();
+                    toast({ title: 'Tutorial reset', description: 'You can start the tutorial again anytime.' });
+                  }}
+                  className="w-full text-muted-foreground hover:text-destructive"
+                >
+                  Reset Progress
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

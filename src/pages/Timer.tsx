@@ -12,10 +12,12 @@ import { getPriorityColor, getPriorityLabel } from '@/lib/priority';
 import { format } from 'date-fns';
 import { formatTimeHMS } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
+import { useTutorial } from '@/contexts/TutorialContext';
 
 const Timer = () => {
   const [searchParams] = useSearchParams();
   const { tasks } = useData();
+  const { handleAction } = useTutorial();
   const [timeblocks, setTimeblocks] = useState<Timeblock[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTimeblock, setSelectedTimeblock] = useState<Timeblock | null>(null);
@@ -39,6 +41,16 @@ const Timer = () => {
     isStopped,
     isOnLongBreak,
   } = useTimer(selectedTask, selectedTimeblock);
+
+  // Tutorial triggers for timer
+  useEffect(() => {
+    if (productiveSeconds >= 30) {
+      handleAction('timer-focus-complete');
+    }
+    if (wastedSeconds >= 30) {
+      handleAction('timer-waste-complete');
+    }
+  }, [productiveSeconds, wastedSeconds, handleAction]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -201,7 +213,10 @@ const Timer = () => {
               )}
 
               <Button
-                onClick={startTimer}
+                onClick={() => {
+                  handleAction('click-start-timer-setup');
+                  startTimer();
+                }}
                 disabled={!selectedTask || !selectedTimeblock}
                 className="w-full gap-2"
                 size="lg"
@@ -257,95 +272,128 @@ const Timer = () => {
         ) : (
           <div className="space-y-6">
             {/* Timer Display */}
-            <Card className="border-2 border-primary/30 dark:border-primary/50 dark:bg-card/50">
-              <CardContent className="pt-8">
+            <Card 
+              className="border-2 border-primary/30 dark:border-primary/50 dark:bg-card/50"
+              data-tutorial={!isPaused ? "timer-running-section" : "timer-wasting-section"}
+            >
+              <CardContent className="pt-6 sm:pt-8">
                 {selectedTask && (
-                  <div className="text-center mb-6">
+                  <div className="text-center mb-4 sm:mb-6">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <div
-                        className="w-4 h-4 rounded-full"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full"
                         style={{ backgroundColor: getPriorityColor(selectedTask.priorityQuadrant) }}
                       />
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         {getPriorityLabel(selectedTask.priorityQuadrant)}
                       </span>
                     </div>
-                    <h2 className="text-2xl font-bold">{selectedTask.title}</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold truncate px-2">{selectedTask.title}</h2>
                   </div>
                 )}
 
-                {/* Circular Timer */}
-                <div className="relative w-64 h-64 mx-auto mb-8">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="128"
-                      cy="128"
-                      r="120"
-                      fill="none"
-                      stroke="hsl(var(--muted))"
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="128"
-                      cy="128"
-                      r="120"
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth="8"
-                      strokeDasharray={`${2 * Math.PI * 120}`}
-                      strokeDashoffset={`${2 * Math.PI * 120 * (1 - progress / 100)}`}
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-5xl font-bold mb-2">{formatTime(productiveSeconds)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      / {formatTime(targetSeconds)}
-                    </p>
-                    {isPaused && (
-                      <p className="text-sm text-destructive mt-2 font-medium">PAUSED</p>
-                    )}
-                    {isOnLongBreak && (
-                      <p className="text-sm text-orange-500 mt-2 font-medium">LONG BREAK</p>
-                    )}
+                {/* Circular Timer & Stats Layout */}
+                <div className="flex flex-col items-center">
+                  {/* Timer Circle */}
+                  <div className="relative w-56 h-56 sm:w-64 sm:h-64 mb-6">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="46%"
+                        fill="none"
+                        stroke="hsl(var(--muted))"
+                        strokeWidth="8"
+                      />
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="46%"
+                        fill="none"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth="8"
+                        strokeDasharray={`${2 * Math.PI * (window.innerWidth < 640 ? 108 : 120)}`} // Approx calculations, dynamic would be better but this is sufficient for responsive svg
+                        strokeDashoffset={`${2 * Math.PI * (window.innerWidth < 640 ? 108 : 120) * (1 - progress / 100)}`}
+                        pathLength={100}
+                        className="transition-all duration-1000"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-4xl sm:text-5xl font-bold mb-1 sm:mb-2 tabular-nums">
+                        {formatTime(productiveSeconds)}
+                      </p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Target: {formatTime(targetSeconds)}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Progress Bar */}
-                <Progress value={progress} className="h-2 mb-6" />
+                  {/* Dual Stat Display - Productive vs Wasted */}
+                  <div className="grid grid-cols-2 gap-4 w-full max-w-sm mb-6">
+                    <div className="bg-primary/5 rounded-xl p-3 text-center border border-primary/10">
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">Productive</p>
+                      <p className="text-xl sm:text-2xl font-bold text-primary tabular-nums">
+                        {formatTime(productiveSeconds)}
+                      </p>
+                    </div>
+                    <div className={`rounded-xl p-3 text-center border transition-colors ${
+                      isPaused 
+                        ? 'bg-destructive/10 border-destructive/20 animate-pulse' 
+                        : 'bg-muted/30 border-transparent'
+                    }`}>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                        {isPaused ? 'Wasting...' : 'Wasted'}
+                      </p>
+                      <p className={`text-xl sm:text-2xl font-bold tabular-nums ${isPaused ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {formatTime(wastedSeconds)}
+                      </p>
+                    </div>
+                  </div>
 
-                {/* Controls */}
-                <div className="flex gap-2 justify-center flex-wrap">
-                  {!isPaused ? (
-                    <Button onClick={pauseTimer} variant="outline" size="lg" className="gap-2" data-tutorial="pause-timer-btn">
-                      <Pause className="w-5 h-5" />
-                      Pause
+                  {/* Progress Bar */}
+                  <div className="w-full max-w-sm mb-6">
+                   <Progress value={progress} className="h-2" />
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex gap-2 sm:gap-3 justify-center flex-wrap w-full">
+                    {!isPaused ? (
+                      <Button onClick={() => {
+                        handleAction('click-pause-timer');
+                        pauseTimer();
+                      }} variant="outline" size="lg" className="flex-1 min-w-[100px] gap-2" data-tutorial="timer-pause-button">
+                        <Pause className="w-5 h-5" />
+                        Pause
+                      </Button>
+                    ) : (
+                      <Button onClick={resumeTimer} size="lg" className="flex-1 min-w-[100px] gap-2">
+                        <Play className="w-5 h-5" />
+                        Resume
+                      </Button>
+                    )}
+                    <Button
+                      onClick={takeLongBreak}
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 min-w-[100px] gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+                    >
+                      <Coffee className="w-5 h-5" />
+                      Break
                     </Button>
-                  ) : (
-                    <Button onClick={resumeTimer} size="lg" className="gap-2">
-                      <Play className="w-5 h-5" />
-                      Resume
+                    <Button
+                      onClick={() => {
+                        handleAction('click-stop-timer');
+                        stopTimer();
+                      }}
+                      variant="destructive"
+                      size="lg"
+                      className="flex-1 min-w-[100px] gap-2"
+                      data-tutorial="timer-stop-button"
+                    >
+                      <Square className="w-5 h-5" />
+                      Stop
                     </Button>
-                  )}
-                  <Button
-                    onClick={takeLongBreak}
-                    variant="outline"
-                    size="lg"
-                    className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
-                  >
-                    <Coffee className="w-5 h-5" />
-                    Long Break
-                  </Button>
-                  <Button
-                    onClick={stopTimer}
-                    variant="destructive"
-                    size="lg"
-                    className="gap-2"
-                    data-tutorial="stop-timer-btn"
-                  >
-                    <Square className="w-5 h-5" />
-                    Stop
-                  </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

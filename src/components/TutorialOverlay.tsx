@@ -1,215 +1,626 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import Joyride, { CallBackProps, TooltipRenderProps, STATUS, EVENTS, ACTIONS } from 'react-joyride';
+import { useLocation } from 'react-router-dom';
 import { useTutorial } from '@/contexts/TutorialContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Lottie from 'lottie-react';
+import { Sparkles, GripHorizontal, Eye } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { ArrowRight, X, Sparkles } from 'lucide-react';
 
-export const TutorialOverlay = () => {
-  const { isActive, currentStep, nextStep, skipTutorial, getCurrentStep, completedSteps } = useTutorial();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
-  const step = getCurrentStep();
-
-  useEffect(() => {
-    if (!isActive || !step) {
-      setHighlightedElement(null);
-      return;
-    }
-
-    // Navigate to the target page if needed
-    if (step.target && location.pathname !== step.target && step.action === 'navigate') {
-      const timer = setTimeout(() => {
-        navigate(step.target);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-
-    // Highlight the target element
-    if (step.highlightElement) {
-      const timer = setTimeout(() => {
-        const element = document.querySelector(step.highlightElement!) as HTMLElement;
-        if (element) {
-          setHighlightedElement(element);
-          // Scroll to element
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+// Floating mascot animation (simple bounce effect)
+const mascotAnimation = {
+  "v": "5.9.0",
+  "fr": 30,
+  "ip": 0,
+  "op": 90,
+  "w": 120,
+  "h": 120,
+  "nm": "Mascot",
+  "ddd": 0,
+  "assets": [],
+  "layers": [{
+    "ddd": 0,
+    "ind": 1,
+    "ty": 4,
+    "nm": "Star",
+    "sr": 1,
+    "ks": {
+      "o": { "a": 0, "k": 100 },
+      "r": { 
+        "a": 1,
+        "k": [
+          { "t": 0, "s": [0] },
+          { "t": 90, "s": [360] }
+        ]
+      },
+      "p": { 
+        "a": 1,
+        "k": [
+          { "t": 0, "s": [60, 70, 0], "e": [60, 50, 0] },
+          { "t": 45, "s": [60, 50, 0], "e": [60, 70, 0] },
+          { "t": 90, "s": [60, 70, 0] }
+        ]
+      },
+      "a": { "a": 0, "k": [0, 0, 0] },
+      "s": { 
+        "a": 1,
+        "k": [
+          { "t": 0, "s": [80, 80, 100], "e": [100, 100, 100] },
+          { "t": 45, "s": [100, 100, 100], "e": [80, 80, 100] },
+          { "t": 90, "s": [80, 80, 100] }
+        ]
+      }
+    },
+    "ao": 0,
+    "shapes": [{
+      "ty": "gr",
+      "it": [
+        {
+          "ty": "sr",
+          "sy": 1,
+          "d": 1,
+          "pt": { "a": 0, "k": 5 },
+          "p": { "a": 0, "k": [0, 0] },
+          "r": { "a": 0, "k": 0 },
+          "ir": { "a": 0, "k": 10 },
+          "is": { "a": 0, "k": 0 },
+          "or": { "a": 0, "k": 25 },
+          "os": { "a": 0, "k": 0 }
+        },
+        {
+          "ty": "fl",
+          "c": { "a": 0, "k": [0.99, 0.8, 0.2, 1] },
+          "o": { "a": 0, "k": 100 }
+        },
+        {
+          "ty": "tr",
+          "p": { "a": 0, "k": [0, 0] },
+          "a": { "a": 0, "k": [0, 0] },
+          "s": { "a": 0, "k": [100, 100] },
+          "r": { "a": 0, "k": 0 },
+          "o": { "a": 0, "k": 100 }
         }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isActive, step, location.pathname, navigate]);
+      ]
+    }],
+    "ip": 0,
+    "op": 90,
+    "st": 0
+  }],
+  "markers": []
+};
 
-  useEffect(() => {
-    if (highlightedElement) {
-      // Add highlight class
-      highlightedElement.classList.add('tutorial-highlight');
+const CustomTooltip = ({
+  step,
+  tooltipProps,
+  skipProps,
+  primaryProps,
+  index,
+  size,
+  isLastStep,
+}: TooltipRenderProps & { isSpotlightVisible?: boolean }) => {
+  const { hideTooltip } = useTutorial();
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const currentTranslateRef = useRef({ x: 0, y: 0 });
+  const initialTranslateRef = useRef({ x: 0, y: 0 });
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault(); // Prevent touch scrolling
+    e.stopPropagation();
+    
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+    
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    initialTranslateRef.current = { ...currentTranslateRef.current };
+    
+    // Disable transition during drag for instant response
+    if (tooltipRef.current) {
+        tooltipRef.current.style.transition = 'none';
+    }
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault();
+      const dx = moveEvent.clientX - dragStartRef.current.x;
+      const dy = moveEvent.clientY - dragStartRef.current.y;
       
-      return () => {
-        highlightedElement.classList.remove('tutorial-highlight');
+      currentTranslateRef.current = {
+        x: initialTranslateRef.current.x + dx,
+        y: initialTranslateRef.current.y + dy
       };
-    }
-  }, [highlightedElement]);
-
-  if (!isActive || !step) return null;
-
-  const progress = (completedSteps.length / 12) * 100;
-
-  const handleNext = () => {
-    nextStep();
-  };
-
-  const handleSkip = () => {
-    const confirmed = window.confirm('Are you sure you want to skip the tutorial? You can always restart it from Settings.');
-    if (confirmed) {
-      skipTutorial();
-    }
-  };
-
-  const getTooltipPosition = () => {
-    if (!highlightedElement) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+      
+      if (tooltipRef.current) {
+        // We preserve the Joyride transform and append ours
+        // Note: Joyride uses 'transform' in tooltipProps.style. 
+        // We need to respect it BUT we wrap the tooltip in a relative container or just assume Joyride's transform is static during the step.
+        // Actually, Joyride's transform is usually something like 'translate3d(100px, 200px, 0)'.
+        // If we want to ADD to it, we can just append another translate.
+        const baseTransform = (tooltipProps as any).style?.transform || '';
+        tooltipRef.current.style.transform = `${baseTransform} translate(${currentTranslateRef.current.x}px, ${currentTranslateRef.current.y}px)`;
+      }
+    };
     
-    const rect = highlightedElement.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-    const windowWidth = window.innerWidth;
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      target.releasePointerCapture(upEvent.pointerId);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      
+      // Re-enable transition (optional, maybe not needed for position)
+      if (tooltipRef.current) {
+          tooltipRef.current.style.transition = '';
+      }
+    };
     
-    let top = '';
-    let left = '';
-    let transform = '';
-
-    switch (step.position) {
-      case 'top':
-        top = `${rect.top - 180}px`;
-        left = `${rect.left + rect.width / 2}px`;
-        transform = 'translate(-50%, 0)';
-        break;
-      case 'bottom':
-        top = `${rect.bottom + 20}px`;
-        left = `${rect.left + rect.width / 2}px`;
-        transform = 'translate(-50%, 0)';
-        break;
-      case 'left':
-        top = `${rect.top + rect.height / 2}px`;
-        left = `${rect.left - 320}px`;
-        transform = 'translate(0, -50%)';
-        break;
-      case 'right':
-        top = `${rect.top + rect.height / 2}px`;
-        left = `${rect.right + 20}px`;
-        transform = 'translate(0, -50%)';
-        break;
-      default:
-        top = '50%';
-        left = '50%';
-        transform = 'translate(-50%, -50%)';
-    }
-
-    // Ensure tooltip stays within viewport
-    const maxTop = windowHeight - 200;
-    const maxLeft = windowWidth - 340;
-    
-    if (parseInt(top) > maxTop) top = `${maxTop}px`;
-    if (parseInt(left) > maxLeft) left = `${maxLeft}px`;
-    if (parseInt(left) < 20) left = '20px';
-
-    return { top, left, transform };
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', handlePointerUp);
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 z-[9998] pointer-events-auto" />
+    <div
+      ref={tooltipRef}
+      {...tooltipProps}
+      style={{
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...((tooltipProps as any).style || {}),
+        // Apply initial/persisted offset on render
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        transform: `${(tooltipProps as any).style?.transform || ''} translate(${currentTranslateRef.current.x}px, ${currentTranslateRef.current.y}px)`,
+        cursor: 'default',
+        touchAction: 'none' // Critical for touch devices
+      }}
+      className="bg-card/95 backdrop-blur-md border-2 border-primary/30 rounded-2xl shadow-2xl p-0 max-w-[calc(100vw-32px)] w-[420px] relative overflow-hidden transition-all duration-300 animate-in fade-in zoom-in-95"
+    >
+       {/* Drag Handle Area */}
+       <div 
+         className="h-12 bg-muted/40 flex justify-center items-center cursor-grab active:cursor-grabbing border-b border-border/50 hover:bg-muted/60 transition-colors touch-none"
+         onPointerDown={handlePointerDown}
+       >
+         <GripHorizontal className="w-12 h-6 text-muted-foreground/60" />
+       </div>
+
+       {/* Content Area */}
+       <div 
+         className="p-5 cursor-pointer active:scale-[0.99] transition-transform"
+         onClick={() => {
+            const dragDist = Math.hypot(
+                currentTranslateRef.current.x - initialTranslateRef.current.x,
+                currentTranslateRef.current.y - initialTranslateRef.current.y
+            );
+            if (dragDist < 5) hideTooltip();
+         }}
+       >
+         {/* ... content ... */}
+         {step.title && (
+           <h4 className="text-xl font-bold text-primary mb-3 flex items-center gap-2">
+             {step.title}
+           </h4>
+         )}
+         <div className="text-foreground/90 leading-relaxed text-base">
+           {step.content}
+         </div>
+         <p className="text-xs text-muted-foreground mt-4 italic opacity-70">
+           Tap this card to hide it temporarily
+         </p>
+       </div>
+
+       {/* Footer */}
+       <div className="px-5 py-4 bg-muted/20 border-t border-border/50 flex justify-between items-center gap-4">
+          {/* ... footer content same ... */}
+          <div className="flex items-center gap-3">
+            <button 
+              {...skipProps} 
+              className="text-xs font-medium text-muted-foreground hover:text-destructive transition-colors px-3 py-1.5 rounded-md hover:bg-destructive/10"
+            >
+              Skip Tutorial
+            </button>
+            <div className="text-xs font-mono font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+              {index + 1} / {size}
+            </div>
+          </div>
+          
+          {(index === 0 || isLastStep) && (
+            <Button 
+              size="sm" 
+              {...primaryProps}
+              className="ml-auto shadow-sm"
+            >
+              {index === 0 ? "Let's Start" : "Finish"}
+            </Button>
+          )}
+       </div>
+    </div>
+  );
+};
+
+// ... exports ...
+
+export const TutorialOverlay = () => {
+  // ... hooks ...
+  const { run, steps, currentStep, completedSteps, handleJoyrideCallback, isTooltipVisible, showTooltip } = useTutorial();
+  const location = useLocation();
+
+  // EARLY EXIT: Don't render anything on form pages - prevents ALL interference with scrolling
+  const isFormPage = location.pathname.includes('/new') || location.pathname.includes('/edit') || location.pathname.includes('/goal');
+  
+  // Debug logging
+  console.log('[TutorialOverlay] pathname:', location.pathname, 'isFormPage:', isFormPage, 'run:', run);
+  
+  // Also early exit if tutorial isn't running
+  if (isFormPage || !run) {
+    console.log('[TutorialOverlay] EARLY EXIT - returning null. isFormPage:', isFormPage, 'run:', run);
+    return null;
+  }
+
+  console.log('[TutorialOverlay] Rendering TutorialOverlayContent');
+  return <TutorialOverlayContent />;
+};
+
+// Separate component to avoid hooks running when we return null
+const TutorialOverlayContent = () => {
+  const { run, steps, currentStep, completedSteps, handleJoyrideCallback, isTooltipVisible, showTooltip } = useTutorial();
+  const location = useLocation();
+
+  const [manualSpotlight, setManualSpotlight] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  
+  const [isSpotlightVisible, setIsSpotlightVisible] = useState(false);
+
+  // Ref for debouncing spotlight disappearance
+  const consecutiveFailuresRef = useRef(0);
+
+  // NEW: Robust polling for "Jumpy" elements
+  // We want to track the element position continuously while the step is active,
+  // NOT just on scroll/resize. This handles layout shifts (images loading, accordion expanding).
+  useEffect(() => {
+    // Only poll when tooltip is visible (user is actively viewing the step)
+    if (!isTooltipVisible) return;
+    
+    const step = steps[currentStep];
+    if (!step || typeof step.target !== 'string' || step.target === 'body') return;
+
+    // Reset failures on step change
+    consecutiveFailuresRef.current = 0;
+
+    // Check if target element exists on current page - if not, don't spam errors
+    // This handles the case where tutorial step expects element on a different page
+    const targetSelector = step.target as string;
+    
+    // Map selectors to expected pages
+    const selectorPageMap: Record<string, string[]> = {
+      '#today-nav': ['/workplan', '/today', '/timer', '/reports', '/'], // Bottom nav visible on all pages
+      '#nav-workplan-tab': ['/workplan', '/today', '/timer', '/reports', '/'],
+      '#nav-reports': ['/workplan', '/today', '/timer', '/reports', '/'],
+      '[data-tutorial="today-goal-card"]': ['/today'],
+      '[data-tutorial="add-today-task"]': ['/today'],
+      '[data-tutorial="start-task-button"]': ['/today'],
+      '[data-tutorial="create-workplan-btn"]': ['/workplan'],
+      '[data-tutorial="workplan-list-item"]': ['/workplan'],
+      '[data-tutorial="add-workplan-task"]': ['/workplan'],
+      '[data-tutorial="workplan-item"]': ['/workplan'],
+      '[data-tutorial="start-timer-btn"]': ['/timer'],
+      '[data-tutorial="timer-pause-button"]': ['/timer'],
+      '[data-tutorial="timer-stop-button"]': ['/timer'],
+    };
+    
+    const expectedPages = selectorPageMap[targetSelector];
+    // Fix: Handle root path '/' correctly - don't append '/' to it
+    if (expectedPages && !expectedPages.some(p => {
+      if (p === '/') return location.pathname === '/';
+      return location.pathname === p || location.pathname.startsWith(p + '/');
+    })) {
+      // Element not expected on this page, don't track - just show dimmer
+      console.log('[Tutorial] Element not expected on this page:', targetSelector, 'current:', location.pathname);
+      setManualSpotlight(null);
+      return;
+    }
+
+    const trackElement = () => {
+        const el = document.querySelector(step.target as string);
+        
+        if (el) {
+            const rect = el.getBoundingClientRect();
+             
+             // Check if element is effectively hidden or 0-size
+             if (rect.width === 0 || rect.height === 0) {
+                 consecutiveFailuresRef.current++;
+                 if (consecutiveFailuresRef.current > 10) {
+                    setManualSpotlight(null);
+                    // Silent log only - no spam toast
+                    console.log('[Tutorial] Target found but size is 0:', step.target);
+                 }
+                 return;
+             }
+
+             // Element found and valid! Reset failures.
+             consecutiveFailuresRef.current = 0;
+
+             // Only update if it actually changed significantly to avoid react render loops
+            setManualSpotlight(prev => {
+                // If we are recovering from a null state, update immediately
+                if (!prev) {
+                    return {
+                        top: rect.top,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height
+                    };
+                }
+                
+                if (Math.abs(prev.top - rect.top) < 1 &&
+                    Math.abs(prev.left - rect.left) < 1 &&
+                    Math.abs(prev.width - rect.width) < 1 &&
+                    Math.abs(prev.height - rect.height) < 1
+                ) {
+                    return prev;
+                }
+                return {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                };
+            });
+        } else {
+            // Element missing - only log, no toast spam
+            consecutiveFailuresRef.current++;
+            if (consecutiveFailuresRef.current > 10) {
+                 setManualSpotlight(null);
+                 // Silent log only
+                 console.log('[Tutorial] Element missing:', step.target);
+            }
+        }
+    };
+
+    // Slower poll (200ms) - fast enough for smooth updates but not excessive
+    const interval = setInterval(trackElement, 200);
+    return () => clearInterval(interval);
+  }, [currentStep, steps, isTooltipVisible, location.pathname]); // Run when tooltip is visible/trying to be visible
+
+  useEffect(() => {
+    // 1. Reset/Hide with fade out immediately
+    setIsSpotlightVisible(false);
+
+    const step = steps[currentStep];
+    if (!step || typeof step.target !== 'string' || step.target === 'body') {
+      setManualSpotlight(null);
+      // Only fade in body dimmer if NOT on form page (already checked above, but good for safety)
+      setTimeout(() => setIsSpotlightVisible(true), 300);
+      return;
+    }
+
+    let scrollTimer: NodeJS.Timeout;
+    let retryTimer: NodeJS.Timeout;
+    let cancelled = false; // Flag to stop retries when effect is cleaned up
+    
+    // Retry logic for finding element
+    let retryCount = 0;
+    const maxRetries = 20; // 2 seconds approx
+
+    const performFocus = () => {
+      // Check if effect was cleaned up
+      if (cancelled) return;
       
-      {/* Highlighted Element Spotlight */}
-      {highlightedElement && (
+      const el = document.querySelector(step.target as string);
+      
+      if (el) {
+        // Found it!
+        // A. Scroll into view (ONLY if not already visible)
+        const rect = el.getBoundingClientRect();
+        const isInViewport = (
+             rect.top >= 0 &&
+             rect.left >= 0 &&
+             rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+             rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+
+        if (!isInViewport) {
+             el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+
+        // B. Wait for scroll to settle
+        scrollTimer = setTimeout(() => {
+             if (cancelled) return;
+             const updatedRect = el.getBoundingClientRect();
+             if (updatedRect.width > 0) {
+                 setManualSpotlight({
+                    top: updatedRect.top, left: updatedRect.left, width: updatedRect.width, height: updatedRect.height
+                 });
+             } else {
+                 setManualSpotlight(null);
+                 console.log('[Tutorial] Target exists but has 0 size:', step.target);
+             }
+             // C. Fade In
+             setIsSpotlightVisible(true);
+        }, 700);
+      } else {
+          // Not found yet... retry?
+          if (retryCount < maxRetries && !cancelled) {
+              retryCount++;
+              retryTimer = setTimeout(performFocus, 100);
+          } else if (!cancelled) {
+              // Give up, show full dimmer
+              setManualSpotlight(null);
+              setIsSpotlightVisible(true);
+              console.log('[Tutorial] Element not found after retries:', step.target);
+          }
+      }
+
+    };
+    
+    // Start sequence
+    retryTimer = setTimeout(performFocus, 100);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(scrollTimer);
+      clearTimeout(retryTimer);
+    };
+  }, [currentStep, steps, location.pathname]);
+  
+  // Simplified: isFormPage check no longer needed here (handled by early return in parent)
+  // Only run if tooltip is visible
+  const shouldRun = isTooltipVisible;
+
+  const progress = ((completedSteps.length / steps.length) * 100).toFixed(0);
+
+  return (
+    <>
+      {/* Animated Progress Bar at Top */}
+      {shouldRun && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] h-1 bg-zinc-200 dark:bg-zinc-800">
+          <div 
+            className="h-full bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_100%] animate-shimmer transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+
+      {/* GLOBAL CUSTOM SPOTLIGHT & DIMMER */}
+      {shouldRun && manualSpotlight && (
         <div
-          className="fixed z-[9999] pointer-events-none"
           style={{
-            top: highlightedElement.getBoundingClientRect().top - 8,
-            left: highlightedElement.getBoundingClientRect().left - 8,
-            width: highlightedElement.getBoundingClientRect().width + 16,
-            height: highlightedElement.getBoundingClientRect().height + 16,
-            boxShadow: '0 0 0 4px rgba(var(--primary), 0.5), 0 0 0 9999px rgba(0, 0, 0, 0.6)',
+            position: 'fixed',
+            top: manualSpotlight.top,
+            left: manualSpotlight.left,
+            width: manualSpotlight.width,
+            height: manualSpotlight.height,
             borderRadius: '12px',
-            transition: 'all 0.3s ease'
+            // Box shadow creates the dimming effect around the spotlight
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4), 0 0 0 4px hsl(var(--primary))', // Visible dimming
+            zIndex: 99, // Above navbar (z-50) but below tooltip
+            pointerEvents: 'none',
+            transition: 'all 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+            opacity: isSpotlightVisible ? 1 : 0, 
+          }}
+        />
+      )}
+      
+      {shouldRun && !manualSpotlight && isSpotlightVisible && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)', // Visible dimming for body steps
+            zIndex: 99, // Above navbar (z-50) to create proper dim effect
+            transition: 'opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+            opacity: 1,
+            pointerEvents: 'none', // Allow clicks through
           }}
         />
       )}
 
-      {/* Tutorial Card */}
-      <Card 
-        className="fixed z-[10000] w-[90vw] max-w-md shadow-2xl border-2 border-primary/50 animate-in fade-in zoom-in duration-300"
-        style={getTooltipPosition()}
-      >
-        <CardHeader className="relative pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <span className="text-xs font-semibold text-primary">
-                  Step {currentStep} of 12
-                </span>
-              </div>
-              <CardTitle className="text-lg">{step.title}</CardTitle>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 -mt-1 -mr-2"
-              onClick={handleSkip}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-          <Progress value={progress} className="h-1.5 mt-2" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <CardDescription className="text-sm leading-relaxed">
-            {step.description}
-          </CardDescription>
-          
-          {step.action === 'wait' && (
-            <Button 
-              className="w-full gap-2" 
-              onClick={handleNext}
-            >
-              Continue
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          )}
+      {/* Step Counter Button (Fixed Bottom) */}
+      {shouldRun && (
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+80px)] left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={showTooltip}
+            className={`
+              rounded-full shadow-xl border-2 border-primary/20 backdrop-blur-md
+              transition-all duration-300 ease-out
+              ${!isTooltipVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-4 pointer-events-none'}
+            `}
+          >
+            <Eye className="w-4 h-4 mr-2 text-primary" />
+            <span className="font-semibold">Show Step {currentStep + 1}/{steps.length}</span>
+          </Button>
+        </div>
+      )}
 
-          {step.action !== 'wait' && (
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={handleSkip}
-              >
-                Skip Tutorial
-              </Button>
-              {step.action !== 'click' && step.action !== 'navigate' && (
-                <Button 
-                  className="flex-1 gap-2" 
-                  onClick={handleNext}
-                >
-                  Next
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* React Joyride - isFormPage check handled by parent component early return */}
+      <Joyride
+        steps={steps}
+        run={shouldRun} // Hide Joyride when tooltip is hidden
+        continuous={true}
+        showSkipButton={true}
+        showProgress={false}
+        callback={handleJoyrideCallback}
+        stepIndex={currentStep}
+        disableOverlayClose={true}
+        disableCloseOnEsc={true}
+        spotlightPadding={8}
+        scrollToFirstStep={true}
+        scrollOffset={100}
+        disableScrolling={false}
+        spotlightClicks={true}
+        disableScrollParentFix={true}
+        tooltipComponent={CustomTooltip}
+        floaterProps={{
+          disableAnimation: true,
+          styles: {
+              arrow: {
+                display: 'none'
+              },
+              floater: {
+                filter: 'drop-shadow(0 8px 24px rgba(0, 0, 0, 0.3))',
+                transition: 'transform 0.2s ease-out',
+                // We rely on Joyride to position the tooltip (floater) which usually works fine.
+                // If floater positioning is also wrong, we'd need to manual that too, but usually it's just the spotlight.
+              }
+            },
+            offset: 20
+          }}
+          styles={{
+            options: {
+              arrowColor: 'transparent',
+              backgroundColor: 'transparent',
+              overlayColor: 'transparent', // HIDE DEFAULT OVERLAY
+              primaryColor: 'hsl(var(--primary))',
+              textColor: 'hsl(var(--foreground))',
+              width: undefined,
+              zIndex: 9998, // Ensure tooltip is above our custom overlay (99) and everything else
+            },
+            spotlight: {
+              // HIDE DEFAULT SPOTLIGHT COMPLETELY
+              opacity: 0,
+              pointerEvents: 'none',
+              display: 'none'
+            },
+            overlay: {
+               // HIDE DEFAULT OVERLAY
+              display: 'none'
+            },
+            overlayLegacy: {
+               display: 'none'
+            }
+          }}
+        />
 
-      {/* CSS for highlight effect */}
+      {/* Custom CSS for shimmer animation */}
       <style>{`
-        .tutorial-highlight {
-          position: relative;
-          z-index: 9999 !important;
-          pointer-events: auto !important;
+        @keyframes shimmer {
+          0% {
+            background-position: 200% center;
+          }
+          100% {
+            background-position: -200% center;
+          }
+        }
+        
+        .animate-shimmer {
+          animation: shimmer 3s linear infinite;
+        }
+
+        /* Material You inspired transitions */
+        [data-tutorial] {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-tutorial]:focus-visible {
+          outline: 3px solid hsl(var(--primary) / 0.5);
+          outline-offset: 2px;
+        }
+
+        /* Auto-scroll smooth behavior */
+        html {
+          scroll-behavior: smooth;
         }
       `}</style>
     </>
   );
 };
+

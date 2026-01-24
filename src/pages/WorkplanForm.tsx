@@ -9,9 +9,11 @@ import { saveWorkplan, getCurrentUserId } from '@/lib/storage';
 import { WorkplanScope, Workplan } from '@/lib/types';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { useTutorial } from '@/contexts/TutorialContext';
 
 const WorkplanForm = () => {
   const navigate = useNavigate();
+  const { handleAction } = useTutorial();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'create';
 
@@ -34,8 +36,9 @@ const WorkplanForm = () => {
     setIsSaving(true);
     try {
       const userId = getCurrentUserId();
+      const workplanId = `workplan-${Date.now()}`;
       const newWorkplan: Workplan = {
-        id: `workplan-${Date.now()}`,
+        id: workplanId,
         userId,
         title: form.title,
         scope: form.scope,
@@ -49,7 +52,7 @@ const WorkplanForm = () => {
       
       // Small delay for smoother transition
       await new Promise(resolve => setTimeout(resolve, 150));
-      navigate('/workplan', { replace: true });
+      navigate(`/workplan?selected=${workplanId}`, { replace: true });
     } catch (error) {
       console.error('[WorkplanForm] Error saving workplan:', error);
       toast({ title: 'Failed to save workplan', variant: 'destructive' });
@@ -95,6 +98,7 @@ const WorkplanForm = () => {
               className="h-12 text-base"
               autoFocus
               maxLength={100}
+              data-tutorial="workplan-title-input"
             />
             <p className="text-xs text-muted-foreground">
               Give your workplan a descriptive name

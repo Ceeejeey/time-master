@@ -67,4 +67,14 @@ export const CREATE_TABLES = `
     completedTimeblocks INTEGER DEFAULT 0,
     createdAt TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Tutorial Progress Table
+  CREATE TABLE IF NOT EXISTS tutorial_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tutorialStarted INTEGER DEFAULT 0,
+    tutorialCompleted INTEGER DEFAULT 0,
+    currentStep INTEGER DEFAULT 0,
+    completedSteps TEXT DEFAULT '[]',
+    lastUpdatedTimestamp TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `;

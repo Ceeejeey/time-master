@@ -58,52 +58,69 @@ class DatabaseService {
       const platform = Capacitor.getPlatform();
       console.log('[DatabaseService] Initializing database on platform:', platform);
 
-      // Get or create SQLiteConnection (now returns Promise)
+      // 1. Get SQLite Connection Helper
       const sqlite = await this.getSQLiteConnection();
 
+      // 2. Web Store (if applicable)
       if (platform === 'web') {
-        // For web, check if jeep-sqlite is available
         const jeepSqliteEl = document.querySelector('jeep-sqlite');
         if (jeepSqliteEl) {
-          console.log('[DatabaseService] Initializing web store...');
           await sqlite.initWebStore();
-          console.log('[DatabaseService] ✓ Web store initialized');
-        } else {
-          console.warn('[DatabaseService] jeep-sqlite not found, skipping web store init');
         }
       }
 
-      // Create database connection
-      console.log('[DatabaseService] Creating connection to:', DB_NAME);
-      this.db = await sqlite.createConnection(
-        DB_NAME,
-        false, // encrypted
-        'no-encryption',
-        1, // version
-        false // readonly
-      );
+      // 3. Check for Existing Connection (PREVENT 'already exists' ERROR)
+      console.log('[DatabaseService] Checking existing connections...');
+      const consistency = await sqlite.checkConnectionsConsistency({ 
+        dbNames: [DB_NAME], 
+        openModes: ['RW'], // ReadWrite
+      });
+      console.log('[DatabaseService] Connection consistency:', consistency);
 
-      // Open connection
-      console.log('[DatabaseService] Opening database connection...');
-      await this.db.open();
-      console.log('[DatabaseService] ✓ Database connection opened successfully');
+      const isConn = await sqlite.isConnection(DB_NAME, false);
+      console.log('[DatabaseService] Is connection present:', isConn.result);
 
-      // Create tables
-      console.log('[DatabaseService] Creating tables...');
-      const result = await this.db.execute(CREATE_TABLES);
-      console.log('[DatabaseService] ✓ Tables created successfully:', result);
+      if (isConn.result) {
+        console.log('[DatabaseService] Connection exists, verifying state...');
+        // Retrieve existing connection
+        this.db = await sqlite.retrieveConnection(DB_NAME, false);
+        
+        // If retrieved, check if open. 
+        // Note: retrieveConnection usually returns an open connection handle or allows us to use it.
+        // We'll try to check isDBOpen if possible, or just proceed.
+        const isOpen = await this.db.isDBOpen();
+        if (!isOpen.result) {
+             console.log('[DatabaseService] Existing connection found but closed. Opening...');
+             await this.db.open();
+        }
+      } else {
+        // Create new connection
+        console.log('[DatabaseService] Creating NEW connection to:', DB_NAME);
+        this.db = await sqlite.createConnection(
+          DB_NAME,
+          false, // encrypted
+          'no-encryption',
+          1, // version
+          false // readonly
+        );
+        
+        // Open it
+        console.log('[DatabaseService] Opening database connection...');
+        await this.db.open();
+      }
+      
+      console.log('[DatabaseService] ✓ Database connection ready');
 
-      // Verify tables were created
-      const tables = await this.db.query(
-        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
-        []
-      );
-      console.log('[DatabaseService] ✓ Existing tables:', tables.values?.map((t: { name: string }) => t.name));
-
+      // 4. Create Tables (Idempotent)
+      console.log('[DatabaseService] Ensuring tables exist...');
+      await this.db.execute(CREATE_TABLES);
+      
       this.isInitialized = true;
-      console.log('[DatabaseService] ✓ Database initialization complete');
+      console.log('[DatabaseService] ✓ Initialization complete');
     } catch (error) {
       console.error('[DatabaseService] ✗ Error initializing database:', error);
+      // Even if init fails, if we have a db object, we might still be okay? 
+      // No, re-throw to let app know.
       throw error;
     }
   }
