@@ -265,9 +265,33 @@ export const TutorialProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       if (formNavigationActions.includes(action)) {
         console.log('[Tutorial] Form navigation action - advancing without waiting for element');
-        // Release lock before calling nextStep
-        isAdvancingRef.current = false;
-        nextStep();
+        
+        // For 'click-add-task', skip the "Task Added" step and go directly to "Today Navigation"
+        // This provides a better flow - user doesn't need to see the task they just created
+        if (action === 'click-add-task') {
+          console.log('[Tutorial] Skipping Task Added step, going to Today Navigation');
+          // Directly set step 6 (Today Nav) instead of calling nextStep twice
+          // Step 4 = Add Task, Step 5 = Task Added (skip), Step 6 = Today Navigation
+          const todayNavStep = currentStep + 2; // Skip one step
+          const newCompletedSteps = [...completedSteps, currentStep, currentStep + 1];
+          
+          setCompletedSteps(newCompletedSteps);
+          setCurrentStep(todayNavStep);
+          setIsTooltipVisible(true);
+          saveProgress({ 
+            currentStep: todayNavStep, 
+            completedSteps: newCompletedSteps 
+          });
+          
+          // Release lock
+          setTimeout(() => {
+            isAdvancingRef.current = false;
+          }, 500);
+        } else {
+          // Release lock before calling nextStep
+          isAdvancingRef.current = false;
+          nextStep();
+        }
         return;
       }
       
