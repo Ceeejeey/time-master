@@ -6,6 +6,7 @@ class DatabaseService {
   private sqlite: SQLiteConnection | null = null;
   private db: SQLiteDBConnection | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null; // Singleton promise for initialization
 
   constructor() {
     // Don't initialize SQLiteConnection here - wait for initialize()
@@ -49,11 +50,31 @@ class DatabaseService {
   }
 
   async initialize(): Promise<void> {
+    // If already initialized, return immediately
     if (this.isInitialized) {
       console.log('[DatabaseService] Already initialized, skipping...');
       return;
     }
-
+    
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      console.log('[DatabaseService] Initialization in progress, waiting...');
+      return this.initializationPromise;
+    }
+    
+    // Start initialization and store the promise
+    this.initializationPromise = this.doInitialize();
+    
+    try {
+      await this.initializationPromise;
+    } catch (error) {
+      // Reset promise on failure so retry is possible
+      this.initializationPromise = null;
+      throw error;
+    }
+  }
+  
+  private async doInitialize(): Promise<void> {
     try {
       const platform = Capacitor.getPlatform();
       console.log('[DatabaseService] Initializing database on platform:', platform);
