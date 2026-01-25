@@ -9,7 +9,6 @@ import {
   Circle,
   Calendar as CalendarIcon,
   RotateCcw,
-  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,9 +68,6 @@ const Today = () => {
     null
   );
   const hasInitialized = useRef(false); // Track if values have been initialized
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [startY, setStartY] = useState(0);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const today = format(currentDate, "yyyy-MM-dd");
@@ -124,38 +120,6 @@ const Today = () => {
   const loadData = async () => {
     const workplansData = await getWorkplans();
     setWorkplans(workplansData);
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      setCurrentDate(new Date()); // Update date on refresh
-      await Promise.all([refreshData(), refreshTodayPlan(), loadData()]);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (window.scrollY === 0) {
-      setStartY(e.touches[0].clientY);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (window.scrollY === 0 && startY > 0) {
-      const currentY = e.touches[0].clientY;
-      const distance = Math.max(0, Math.min(currentY - startY, 80));
-      setPullDistance(distance);
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (pullDistance > 60) {
-      await handleRefresh();
-    }
-    setStartY(0);
-    setPullDistance(0);
   };
 
   const handleRemoveTask = async (todayTaskId: string) => {
@@ -264,41 +228,7 @@ const Today = () => {
     : 0;
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Pull to refresh indicator */}
-      {pullDistance > 0 && (
-        <div
-          className="fixed top-14 left-0 right-0 flex justify-center z-50 transition-opacity"
-          style={{
-            opacity: pullDistance / 60,
-            transform: `translateY(${Math.min(pullDistance - 20, 40)}px)`,
-          }}
-        >
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-            <RefreshCw
-              className={`w-4 h-4 ${pullDistance > 60 ? "animate-spin" : ""}`}
-            />
-            <span className="text-sm">
-              {pullDistance > 60 ? "Release to refresh" : "Pull to refresh"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {isRefreshing && (
-        <div className="fixed top-14 left-0 right-0 flex justify-center z-50">
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Refreshing...</span>
-          </div>
-        </div>
-      )}
-
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-3 sm:p-4 md:p-6">
       <div className="w-full max-w-full px-0 space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

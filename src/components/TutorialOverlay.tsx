@@ -2,7 +2,7 @@ import Joyride, { CallBackProps, TooltipRenderProps, STATUS, EVENTS, ACTIONS } f
 import { useLocation } from 'react-router-dom';
 import { useTutorial } from '@/contexts/TutorialContext';
 import Lottie from 'lottie-react';
-import { Sparkles, GripHorizontal, Eye } from 'lucide-react';
+import { Sparkles, GripHorizontal } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -256,7 +256,7 @@ export const TutorialOverlay = () => {
 
 // Separate component to avoid hooks running when we return null
 const TutorialOverlayContent = () => {
-  const { run, steps, currentStep, completedSteps, handleJoyrideCallback, isTooltipVisible, showTooltip } = useTutorial();
+  const { run, steps, currentStep, completedSteps, handleJoyrideCallback, isTooltipVisible, showTooltip, hideTooltip } = useTutorial();
   const location = useLocation();
 
   const [manualSpotlight, setManualSpotlight] = useState<{
@@ -267,6 +267,37 @@ const TutorialOverlayContent = () => {
   } | null>(null);
   
   const [isSpotlightVisible, setIsSpotlightVisible] = useState(false);
+  
+  // Auto-minimize timer ref
+  const autoMinimizeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Auto-minimize effect: Hide tooltip after 5 seconds of inactivity
+  // EXCEPT for the welcome step (step 0) which should stay visible
+  useEffect(() => {
+    // Clear any existing timer
+    if (autoMinimizeTimerRef.current) {
+      clearTimeout(autoMinimizeTimerRef.current);
+      autoMinimizeTimerRef.current = null;
+    }
+    
+    // Don't auto-minimize the welcome step (step 0) or if already hidden
+    if (currentStep === 0 || !isTooltipVisible) {
+      return;
+    }
+    
+    // Set timer to auto-minimize after 8 seconds
+    autoMinimizeTimerRef.current = setTimeout(() => {
+      console.log('[TutorialOverlay] Auto-minimizing tooltip after 8 seconds');
+      hideTooltip();
+    }, 8000);
+    
+    return () => {
+      if (autoMinimizeTimerRef.current) {
+        clearTimeout(autoMinimizeTimerRef.current);
+        autoMinimizeTimerRef.current = null;
+      }
+    };
+  }, [currentStep, isTooltipVisible, hideTooltip]);
 
   // Ref for debouncing spotlight disappearance
   const consecutiveFailuresRef = useRef(0);
@@ -512,23 +543,32 @@ const TutorialOverlayContent = () => {
         />
       )}
 
-      {/* Step Counter Button (Fixed Bottom) */}
-      {shouldRun && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+80px)] left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={showTooltip}
-            className={`
-              rounded-full shadow-xl border-2 border-primary/20 backdrop-blur-md
-              transition-all duration-300 ease-out
-              ${!isTooltipVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-4 pointer-events-none'}
-            `}
-          >
-            <Eye className="w-4 h-4 mr-2 text-primary" />
-            <span className="font-semibold">Show Step {currentStep + 1}/{steps.length}</span>
-          </Button>
-        </div>
+      {/* Step Counter Button (Fixed Bottom) - REMOVED, replaced by FAB */}
+      
+      {/* Minimized Tutorial FAB (Fixed Bottom Right) - Shows when tooltip is hidden */}
+      {!isTooltipVisible && (
+        <button
+          onClick={showTooltip}
+          className={`
+            fixed bottom-[calc(env(safe-area-inset-bottom)+70px)] right-4 z-[9999]
+            w-14 h-14 rounded-full
+            bg-gradient-to-br from-primary to-primary/80
+            shadow-lg shadow-primary/30
+            flex items-center justify-center
+            transition-all duration-300 ease-out
+            active:scale-95
+            animate-in fade-in zoom-in-75 duration-300
+          `}
+          style={{
+            animation: 'pulse-glow 2s ease-in-out infinite',
+          }}
+        >
+          <Sparkles className="w-6 h-6 text-primary-foreground" />
+          {/* Step badge */}
+          <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-secondary text-secondary-foreground text-xs font-bold flex items-center justify-center shadow-md border-2 border-background">
+            {currentStep + 1}
+          </span>
+        </button>
       )}
 
       {/* React Joyride - isFormPage check handled by parent component early return */}
@@ -603,6 +643,17 @@ const TutorialOverlayContent = () => {
         
         .animate-shimmer {
           animation: shimmer 3s linear infinite;
+        }
+        
+        @keyframes pulse-glow {
+          0%, 100% {
+            box-shadow: 0 4px 15px rgba(var(--primary), 0.4), 0 0 0 0 rgba(var(--primary), 0.4);
+            transform: scale(1);
+          }
+          50% {
+            box-shadow: 0 6px 20px rgba(var(--primary), 0.6), 0 0 0 8px rgba(var(--primary), 0);
+            transform: scale(1.05);
+          }
         }
 
         /* Material You inspired transitions */

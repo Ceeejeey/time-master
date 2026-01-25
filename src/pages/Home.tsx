@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Plus, Calendar, BarChart3, Clock, TrendingUp, Zap, Target, Award, RefreshCw } from 'lucide-react';
+import { Play, Plus, Calendar, BarChart3, Clock, TrendingUp, Zap, Target, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getTodayReport } from '@/lib/reports';
@@ -20,9 +20,6 @@ const Home = () => {
     completionRatePercent: 0,
   });
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [startY, setStartY] = useState(0);
 
   // Update current date every minute
   useEffect(() => {
@@ -37,38 +34,6 @@ const Home = () => {
     const todayReport = getTodayReport(sessions, tasks);
     setReport(todayReport);
   }, [sessions, tasks]);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshData();
-      setCurrentDate(new Date()); // Update date on refresh
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (window.scrollY === 0) {
-      setStartY(e.touches[0].clientY);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (window.scrollY === 0 && startY > 0) {
-      const currentY = e.touches[0].clientY;
-      const distance = Math.max(0, Math.min(currentY - startY, 80));
-      setPullDistance(distance);
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (pullDistance > 60) {
-      await handleRefresh();
-    }
-    setStartY(0);
-    setPullDistance(0);
-  };
 
   // Get today's tasks from today plan
   const todayTasks = todayPlan?.tasks
@@ -87,37 +52,7 @@ const Home = () => {
     : 0;
 
   return (
-    <div 
-      className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Pull to refresh indicator */}
-      {pullDistance > 0 && (
-        <div 
-          className="fixed top-14 left-0 right-0 flex justify-center z-50 transition-opacity"
-          style={{ 
-            opacity: pullDistance / 60,
-            transform: `translateY(${Math.min(pullDistance - 20, 40)}px)` 
-          }}
-        >
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-            <RefreshCw className={`w-4 h-4 ${pullDistance > 60 ? 'animate-spin' : ''}`} />
-            <span className="text-sm">{pullDistance > 60 ? 'Release to refresh' : 'Pull to refresh'}</span>
-          </div>
-        </div>
-      )}
-      
-      {isRefreshing && (
-        <div className="fixed top-14 left-0 right-0 flex justify-center z-50">
-          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Refreshing...</span>
-          </div>
-        </div>
-      )}
-      
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
         {/* Hero Header - Mobile optimized */}
         <div className="flex flex-col gap-3 sm:gap-4">
