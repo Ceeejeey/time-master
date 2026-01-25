@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getWorkplans, getTasks, saveTodayPlan, getCurrentUserId } from '@/lib/storage';
 import { Workplan, Task, TodayPlan } from '@/lib/types';
 import { getPriorityLabel, getPriorityColor } from '@/lib/priority';
-import { toast } from '@/hooks/use-toast';
 import { useData } from '@/contexts/DataContext';
 import { format } from 'date-fns';
 
@@ -18,7 +17,7 @@ const TodayTaskForm = () => {
   const [workplans, setWorkplans] = useState<Workplan[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState('');
-  const [timeblockCount, setTimeblockCount] = useState(1);
+  const [timeblockCount, setTimeblockCount] = useState<number | ''>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,7 +32,6 @@ const TodayTaskForm = () => {
         setAllTasks(tasksData);
       } catch (error) {
         console.error('[TodayTaskForm] Error loading data:', error);
-        toast({ title: 'Failed to load data', variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
@@ -45,12 +43,11 @@ const TodayTaskForm = () => {
     e.preventDefault();
     
     if (!selectedTaskId) {
-      toast({ title: 'Please select a task', variant: 'destructive' });
       return;
     }
 
-    if (timeblockCount < 1) {
-      toast({ title: 'Please specify at least 1 timeblock', variant: 'destructive' });
+    const blocks = typeof timeblockCount === 'number' ? timeblockCount : 0;
+    if (blocks < 1) {
       return;
     }
 
@@ -66,7 +63,7 @@ const TodayTaskForm = () => {
           {
             id: `today-task-${Date.now()}`,
             taskId: selectedTaskId,
-            timeblockCount: timeblockCount,
+            timeblockCount: blocks,
             completed: false,
             order: todayPlan.tasks.length,
           },
@@ -80,7 +77,7 @@ const TodayTaskForm = () => {
         tasks: [{
           id: `today-task-${Date.now()}`,
           taskId: selectedTaskId,
-          timeblockCount: timeblockCount,
+          timeblockCount: blocks,
           completed: false,
           order: 0,
         }],
@@ -90,14 +87,12 @@ const TodayTaskForm = () => {
       await saveTodayPlan(updatedPlan);
       await refreshTodayPlan();
       await refreshData();
-      toast({ title: 'Task added to today\'s plan' });
       
       // Small delay for smoother transition
       await new Promise(resolve => setTimeout(resolve, 150));
       navigate('/today', { replace: true });
     } catch (error) {
       console.error('[TodayTaskForm] Error adding task:', error);
-      toast({ title: 'Failed to add task', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -106,7 +101,8 @@ const TodayTaskForm = () => {
   const selectedTask = allTasks.find(t => t.id === selectedTaskId);
   const estimatedMinutes = selectedTask ? selectedTask.estimatedTotalTimeMinutes : 0;
   const timeblockDuration = todayPlan?.timeblockDuration || 25;
-  const totalMinutes = timeblockCount * timeblockDuration;
+  const actualCount = typeof timeblockCount === 'number' ? timeblockCount : 0;
+  const totalMinutes = actualCount * timeblockDuration;
 
   if (isLoading) {
     return (
@@ -228,7 +224,11 @@ const TodayTaskForm = () => {
                 min="1"
                 max="12"
                 value={timeblockCount}
-                onChange={e => setTimeblockCount(parseInt(e.target.value) || 1)}
+                onChange={e => {
+                  const val = e.target.value;
+                  setTimeblockCount(val === '' ? '' : parseInt(val) || '');
+                }}
+                placeholder="Enter number of timeblocks"
                 className="h-12 text-base"
               />
               <p className="text-xs text-muted-foreground">

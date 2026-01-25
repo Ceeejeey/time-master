@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getUser, saveUser, getTimeblocks, saveTimeblock } from '@/lib/storage';
 import { User, Timeblock } from '@/lib/types';
-import { toast } from '@/hooks/use-toast';
 import { useTutorial } from '@/contexts/TutorialContext';
 import { signOutFromGoogle } from '@/lib/google-auth';
 import { Capacitor } from '@capacitor/core';
@@ -16,7 +15,7 @@ const Settings = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [timeblocks, setTimeblocks] = useState<Timeblock[]>([]);
-  const [newBlockDuration, setNewBlockDuration] = useState(25);
+  const [newBlockDuration, setNewBlockDuration] = useState<number | ''>('');
   const { resetTutorial, startTutorial } = useTutorial();
   const isGoogleUser = localStorage.getItem('timemaster_google_user') === 'true';
   const googleProfilePic = localStorage.getItem('timemaster_google_profile_pic') || '';
@@ -34,15 +33,17 @@ const Settings = () => {
   }, []);
 
   const handleAddTimeblock = async () => {
+    const duration = typeof newBlockDuration === 'number' ? newBlockDuration : 0;
+    if (duration < 5 || duration > 180) return;
+    
     const newBlock: Timeblock = {
       id: `tb-${Date.now()}`,
-      durationMinutes: newBlockDuration,
-      label: `${newBlockDuration} min`,
+      durationMinutes: duration,
+      label: `${duration} min`,
     };
     await saveTimeblock(newBlock);
     setTimeblocks([...timeblocks, newBlock]);
-    toast({ title: 'Timeblock added' });
-    setNewBlockDuration(25);
+    setNewBlockDuration('');
   };
 
   const handleSignOut = async () => {
@@ -58,13 +59,10 @@ const Settings = () => {
       localStorage.removeItem('timemaster_google_profile_pic');
       localStorage.removeItem('timemaster_google_id');
       
-      toast({ title: 'Signed out successfully' });
-      
       // Reload to go back to onboarding
       window.location.reload();
     } catch (error) {
       console.error('Sign out error:', error);
-      toast({ title: 'Error signing out', variant: 'destructive' });
     }
   };
 
@@ -175,7 +173,11 @@ const Settings = () => {
                 <Input
                   type="number"
                   value={newBlockDuration}
-                  onChange={e => setNewBlockDuration(parseInt(e.target.value))}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewBlockDuration(val === '' ? '' : parseInt(val) || '');
+                  }}
+                  placeholder="Enter minutes"
                   min={5}
                   max={180}
                   className="h-10"
@@ -225,7 +227,6 @@ const Settings = () => {
               <Button
                 onClick={() => {
                   startTutorial();
-                  toast({ title: 'Tutorial started!', description: 'Follow the interactive guide.' });
                 }}
                 className="gap-2 flex-1 h-10 text-sm"
                 size="sm"
@@ -248,7 +249,6 @@ const Settings = () => {
               size="sm"
               onClick={async () => {
                 await resetTutorial();
-                toast({ title: 'Tutorial reset', description: 'You can start the tutorial again anytime.' });
               }}
               className="w-full text-xs text-muted-foreground hover:text-destructive h-8"
             >

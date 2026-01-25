@@ -296,26 +296,27 @@ const Timer = () => {
                 <div className="flex flex-col items-center">
                   {/* Timer Circle */}
                   <div className="relative w-56 h-56 sm:w-64 sm:h-64 mb-6">
-                    <svg className="w-full h-full transform -rotate-90">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                       <circle
-                        cx="50%"
-                        cy="50%"
-                        r="46%"
+                        cx="50"
+                        cy="50"
+                        r="45"
                         fill="none"
                         stroke="hsl(var(--muted))"
-                        strokeWidth="8"
+                        strokeWidth="6"
                       />
                       <circle
-                        cx="50%"
-                        cy="50%"
-                        r="46%"
+                        cx="50"
+                        cy="50"
+                        r="45"
                         fill="none"
                         stroke="hsl(var(--primary))"
-                        strokeWidth="8"
-                        strokeDasharray={`${2 * Math.PI * (window.innerWidth < 640 ? 108 : 120)}`} // Approx calculations, dynamic would be better but this is sufficient for responsive svg
-                        strokeDashoffset={`${2 * Math.PI * (window.innerWidth < 640 ? 108 : 120) * (1 - progress / 100)}`}
-                        pathLength={100}
-                        className="transition-all duration-1000"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        pathLength="100"
+                        strokeDasharray="100"
+                        strokeDashoffset={100 - progress}
+                        className="transition-all duration-300"
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">

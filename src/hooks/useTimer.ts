@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { TimerSession, Task, Timeblock } from '@/lib/types';
 import { saveTimerSession, getTodayPlan, saveTodayPlan, getCurrentUserId } from '@/lib/storage';
 import { calculateSessionStats, isSessionPaused, getTotalPauseTimeSeconds, isSessionRunning } from '@/lib/timer';
-import { toast } from '@/hooks/use-toast';
-import { formatTimeHMS } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
@@ -60,10 +58,7 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     setIsPaused(false);
     await saveTimerSession(newSession);
     
-    toast({
-      title: 'Timer Started',
-      description: `Working on: ${task.title}`,
-    });
+    console.log('[Timer] Started:', task.title);
   }, [task, timeblock]);
 
   const pauseTimer = useCallback(async () => {
@@ -81,10 +76,7 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     setIsPaused(true);
     await saveTimerSession(updatedSession);
     
-    toast({
-      title: 'Timer Paused',
-      description: 'Wasting time tracking started...',
-    });
+    console.log('[Timer] Paused');
   }, [session, timeblock]);
 
   const resumeTimer = useCallback(async () => {
@@ -107,10 +99,7 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     setIsPaused(false);
     await saveTimerSession(updatedSession);
     
-    toast({
-      title: 'Timer Resumed',
-      description: 'Back to work!',
-    });
+    console.log('[Timer] Resumed');
   }, [session, timeblock]);
 
   const stopTimer = useCallback(async () => {
@@ -181,10 +170,7 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
       console.error('Error updating today plan:', error);
     }
     
-    toast({
-      title: 'Timeblock Completed!',
-      description: `Productive: ${formatTimeHMS(stats.productiveSeconds)} | Wasted: ${formatTimeHMS(stats.wastedSeconds)}`,
-    });
+    console.log('[Timer] Stopped - Productive:', stats.productiveSeconds, 'Wasted:', stats.wastedSeconds);
   }, [session, timeblock, task, productiveSeconds]);
 
   const takeLongBreak = useCallback(async () => {
@@ -215,10 +201,7 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     setIsPaused(true);
     await saveTimerSession(updatedSession);
     
-    toast({
-      title: 'Long Break Started',
-      description: `Progress saved: ${formatTimeHMS(stats.productiveSeconds)} productive, ${formatTimeHMS(stats.wastedSeconds)} wasted`,
-    });
+    console.log('[Timer] Long break started');
   }, [session, timeblock]);
 
   const resumeFromLongBreak = useCallback(async () => {
@@ -247,10 +230,7 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     
     await saveTimerSession(updatedSession);
     
-    toast({
-      title: 'Resumed from Long Break',
-      description: 'Back to work!',
-    });
+    console.log('[Timer] Resumed from long break');
   }, [session, timeblock]);
 
   const getProgress = useCallback(() => {

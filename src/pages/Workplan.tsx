@@ -26,7 +26,6 @@ import {
 import { Task, Workplan as WorkplanType } from "@/lib/types";
 import { format } from "date-fns";
 import { getPriorityLabel, getPriorityColor } from "@/lib/priority";
-import { toast } from "@/hooks/use-toast";
 import { EisenhowerMatrix } from "@/components/EisenhowerMatrix";
 import { useTutorial } from "@/contexts/TutorialContext";
 
@@ -89,7 +88,6 @@ const Workplan = () => {
       await saveWorkplan(updatedWorkplan);
     }
     await loadData();
-    toast({ title: "Task deleted" });
   };
 
   const workplanTasks = selectedWorkplan

@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { saveWorkplan, getCurrentUserId } from '@/lib/storage';
 import { WorkplanScope, Workplan } from '@/lib/types';
 import { format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
 import { useTutorial } from '@/contexts/TutorialContext';
 
 const WorkplanForm = () => {
@@ -29,7 +28,6 @@ const WorkplanForm = () => {
     e.preventDefault();
     
     if (!form.title.trim()) {
-      toast({ title: 'Please enter a workplan title', variant: 'destructive' });
       return;
     }
 
@@ -48,14 +46,12 @@ const WorkplanForm = () => {
       };
 
       await saveWorkplan(newWorkplan);
-      toast({ title: 'Workplan created successfully' });
       
       // Small delay for smoother transition
       await new Promise(resolve => setTimeout(resolve, 150));
       navigate(`/workplan?selected=${workplanId}`, { replace: true });
     } catch (error) {
       console.error('[WorkplanForm] Error saving workplan:', error);
-      toast({ title: 'Failed to save workplan', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }

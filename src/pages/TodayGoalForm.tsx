@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { saveTodayPlan, getCurrentUserId } from '@/lib/storage';
 import { TodayPlan } from '@/lib/types';
 import { format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
 import { useData } from '@/contexts/DataContext';
 
 const TodayGoalForm = () => {
@@ -15,8 +14,8 @@ const TodayGoalForm = () => {
   const { todayPlan, refreshTodayPlan } = useData();
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const [targetTimeblocks, setTargetTimeblocks] = useState(8);
-  const [timeblockDuration, setTimeblockDuration] = useState(25);
+  const [targetTimeblocks, setTargetTimeblocks] = useState<number | ''>('');
+  const [timeblockDuration, setTimeblockDuration] = useState<number | ''>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -32,13 +31,14 @@ const TodayGoalForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (targetTimeblocks < 1 || targetTimeblocks > 24) {
-      toast({ title: 'Target timeblocks must be between 1 and 24', variant: 'destructive' });
+    const blocks = typeof targetTimeblocks === 'number' ? targetTimeblocks : 0;
+    const duration = typeof timeblockDuration === 'number' ? timeblockDuration : 0;
+    
+    if (blocks < 1 || blocks > 24) {
       return;
     }
 
-    if (timeblockDuration < 5 || timeblockDuration > 120) {
-      toast({ title: 'Timeblock duration must be between 5 and 120 minutes', variant: 'destructive' });
+    if (duration < 5 || duration > 120) {
       return;
     }
 
@@ -47,34 +47,34 @@ const TodayGoalForm = () => {
       const userId = getCurrentUserId();
       const updatedPlan: TodayPlan = todayPlan ? {
         ...todayPlan,
-        targetTimeblocks,
-        timeblockDuration,
+        targetTimeblocks: blocks,
+        timeblockDuration: duration,
       } : {
         id: `today-${Date.now()}`,
         userId,
         date: today,
-        targetTimeblocks,
-        timeblockDuration,
+        targetTimeblocks: blocks,
+        timeblockDuration: duration,
         tasks: [],
         completedTimeblocks: 0,
       };
 
       await saveTodayPlan(updatedPlan);
       await refreshTodayPlan();
-      toast({ title: 'Today\'s goal updated successfully' });
       
       // Small delay for smoother transition
       await new Promise(resolve => setTimeout(resolve, 150));
       navigate('/today', { replace: true });
     } catch (error) {
       console.error('[TodayGoalForm] Error saving goal:', error);
-      toast({ title: 'Failed to save goal', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const totalMinutes = targetTimeblocks * timeblockDuration;
+  const actualBlocks = typeof targetTimeblocks === 'number' ? targetTimeblocks : 0;
+  const actualDuration = typeof timeblockDuration === 'number' ? timeblockDuration : 0;
+  const totalMinutes = actualBlocks * actualDuration;
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMinutes = totalMinutes % 60;
 
@@ -123,7 +123,11 @@ const TodayGoalForm = () => {
               min="1"
               max="24"
               value={targetTimeblocks}
-              onChange={e => setTargetTimeblocks(parseInt(e.target.value) || 1)}
+              onChange={e => {
+                const val = e.target.value;
+                setTargetTimeblocks(val === '' ? '' : parseInt(val) || '');
+              }}
+              placeholder="Enter number of timeblocks"
               className="h-12 text-base"
               autoFocus
             />
@@ -143,7 +147,11 @@ const TodayGoalForm = () => {
               max="120"
               step="5"
               value={timeblockDuration}
-              onChange={e => setTimeblockDuration(parseInt(e.target.value) || 25)}
+              onChange={e => {
+                const val = e.target.value;
+                setTimeblockDuration(val === '' ? '' : parseInt(val) || '');
+              }}
+              placeholder="Enter duration in minutes"
               className="h-12 text-base"
             />
             <p className="text-xs text-muted-foreground">
@@ -157,18 +165,22 @@ const TodayGoalForm = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Total timeblocks:</span>
-                <span className="font-bold text-lg text-primary">{targetTimeblocks}</span>
+                <span className="font-bold text-lg text-primary">{actualBlocks || '-'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Duration per block:</span>
-                <span className="font-bold text-lg text-primary">{timeblockDuration} min</span>
+                <span className="font-bold text-lg text-primary">{actualDuration ? `${actualDuration} min` : '-'}</span>
               </div>
               <div className="h-px bg-border my-2"></div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">Total focused time:</span>
                 <span className="font-bold text-xl text-primary">
-                  {totalHours > 0 && `${totalHours}h `}
-                  {remainingMinutes > 0 && `${remainingMinutes}m`}
+                  {totalMinutes > 0 ? (
+                    <>
+                      {totalHours > 0 && `${totalHours}h `}
+                      {remainingMinutes > 0 && `${remainingMinutes}m`}
+                    </>
+                  ) : '-'}
                 </span>
               </div>
             </div>

@@ -35,7 +35,6 @@ import {
 import { Workplan, TodayPlan, TodayTask } from "@/lib/types";
 import { format } from "date-fns";
 import { getPriorityLabel, getPriorityColor } from "@/lib/priority";
-import { toast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/DataContext";
 import { formatTimeHMS } from "@/lib/utils";
 import {
@@ -132,7 +131,6 @@ const Today = () => {
 
     setTodayPlan(updatedPlan);
     await saveTodayPlan(updatedPlan);
-    toast({ title: "Task removed" });
   };
 
   const handleToggleComplete = async (todayTaskId: string) => {
@@ -180,18 +178,9 @@ const Today = () => {
       await saveTodayPlan(newPlan);
       await refreshTodayPlan();
 
-      toast({
-        title: "Today's data cleared!",
-        description:
-          "All tasks and timer sessions for today have been removed.",
-      });
+      console.log('[Today] Data cleared successfully');
     } catch (error) {
       console.error("Error clearing today data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to clear today's data. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 

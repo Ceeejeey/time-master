@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { saveTask, getTask, getWorkplans, saveWorkplan, getCurrentUserId } from '@/lib/storage';
 import { Task, PriorityQuadrant } from '@/lib/types';
 import { getPriorityLabel, getPriorityColor, PRIORITY_QUADRANTS } from '@/lib/priority';
-import { toast } from '@/hooks/use-toast';
 
 const TaskForm = () => {
   const navigate = useNavigate();
@@ -53,11 +52,16 @@ const TaskForm = () => {
     };
   }, []);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    title: string;
+    description: string;
+    priorityQuadrant: PriorityQuadrant;
+    estimatedTotalTimeMinutes: number | '';
+  }>({
     title: '',
     description: '',
-    priorityQuadrant: 'essential_not_immediate' as PriorityQuadrant,
-    estimatedTotalTimeMinutes: 30,
+    priorityQuadrant: 'essential_not_immediate',
+    estimatedTotalTimeMinutes: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -78,7 +82,6 @@ const TaskForm = () => {
           }
         } catch (error) {
           console.error('[TaskForm] Error loading task:', error);
-          toast({ title: 'Failed to load task', variant: 'destructive' });
         }
       }
       setIsLoading(false);
@@ -96,7 +99,7 @@ const TaskForm = () => {
     console.log('[TaskForm] form:', form);
     
     if (!form.title.trim()) {
-      toast({ title: 'Please enter a task title', variant: 'destructive' });
+      // Form validation - title is required
       return;
     }
 
@@ -105,13 +108,15 @@ const TaskForm = () => {
       const userId = getCurrentUserId();
       console.log('[TaskForm] userId:', userId);
       
+      const estimatedTime = typeof form.estimatedTotalTimeMinutes === 'number' ? form.estimatedTotalTimeMinutes : 0;
+      
       const newTask: Task = {
         id: taskId || `task-${Date.now()}`,
         userId,
         title: form.title,
         description: form.description,
         priorityQuadrant: form.priorityQuadrant,
-        estimatedTotalTimeMinutes: form.estimatedTotalTimeMinutes,
+        estimatedTotalTimeMinutes: estimatedTime,
         assignedTimeblocks: [],
         metadata: {},
       };
@@ -145,8 +150,6 @@ const TaskForm = () => {
         console.log('[TaskForm] Skipping workplan update. taskId:', taskId, 'workplanId:', workplanId);
       }
       
-      toast({ title: mode === 'edit' ? 'Task updated successfully' : 'Task created successfully' });
-      
       // Small delay for smoother transition
       await new Promise(resolve => setTimeout(resolve, 150));
       
@@ -159,7 +162,6 @@ const TaskForm = () => {
 
     } catch (error) {
       console.error('[TaskForm] Error saving task:', error);
-      toast({ title: 'Failed to save task', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -289,14 +291,19 @@ const TaskForm = () => {
                 min="1"
                 max="1440"
                 value={form.estimatedTotalTimeMinutes}
-                onChange={e =>
-                  setForm({ ...form, estimatedTotalTimeMinutes: parseInt(e.target.value) || 0 })
-                }
+                onChange={e => {
+                  const val = e.target.value;
+                  setForm({ ...form, estimatedTotalTimeMinutes: val === '' ? '' : parseInt(val) || '' });
+                }}
+                placeholder="Enter estimated time"
                 className="h-12 text-base pl-11"
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Approximately {Math.round(form.estimatedTotalTimeMinutes / 60 * 10) / 10} hours
+              {typeof form.estimatedTotalTimeMinutes === 'number' 
+                ? `Approximately ${Math.round(form.estimatedTotalTimeMinutes / 60 * 10) / 10} hours`
+                : 'Enter time to see hours estimate'
+              }
             </p>
           </div>
 
@@ -331,7 +338,7 @@ const TaskForm = () => {
                   {getPriorityLabel(form.priorityQuadrant)}
                 </span>
                 <span className="text-muted-foreground">
-                  {form.estimatedTotalTimeMinutes} min
+                  {typeof form.estimatedTotalTimeMinutes === 'number' ? `${form.estimatedTotalTimeMinutes} min` : '-'}
                 </span>
               </div>
             </div>
