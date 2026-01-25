@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Clock, Palette, Download, Upload, GraduationCap, BookOpen } from 'lucide-react';
+import { Settings as SettingsIcon, Clock, Download, Upload, GraduationCap, BookOpen, LogOut } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { getUser, saveUser, getTimeblocks, saveTimeblock } from '@/lib/storage';
 import { User, Timeblock } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import { useTutorial } from '@/contexts/TutorialContext';
+import { signOutFromGoogle } from '@/lib/google-auth';
+import { Capacitor } from '@capacitor/core';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const Settings = () => {
   const [timeblocks, setTimeblocks] = useState<Timeblock[]>([]);
   const [newBlockDuration, setNewBlockDuration] = useState(25);
   const { resetTutorial, startTutorial } = useTutorial();
+  const isGoogleUser = localStorage.getItem('timemaster_google_user') === 'true';
+  const googleProfilePic = localStorage.getItem('timemaster_google_profile_pic') || '';
 
   useEffect(() => {
     const loadData = async () => {
@@ -42,39 +45,57 @@ const Settings = () => {
     setNewBlockDuration(25);
   };
 
-  const handleTogglePremium = async () => {
-    if (!user) return;
-    const updated = { ...user, isPremium: !user.isPremium };
-    await saveUser(updated);
-    setUser(updated);
-    toast({
-      title: updated.isPremium ? 'Premium activated!' : 'Premium deactivated',
-      description: updated.isPremium
-        ? 'You now have access to all premium features'
-        : 'Premium features are now locked',
-    });
+  const handleSignOut = async () => {
+    try {
+      // Sign out from Google if on native platform
+      if (Capacitor.isNativePlatform() && isGoogleUser) {
+        await signOutFromGoogle();
+      }
+      
+      // Clear local storage
+      localStorage.removeItem('timemaster_has_user');
+      localStorage.removeItem('timemaster_google_user');
+      localStorage.removeItem('timemaster_google_profile_pic');
+      localStorage.removeItem('timemaster_google_id');
+      
+      toast({ title: 'Signed out successfully' });
+      
+      // Reload to go back to onboarding
+      window.location.reload();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({ title: 'Error signing out', variant: 'destructive' });
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="container mx-auto max-w-4xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Settings</h1>
-          <p className="text-muted-foreground">Customize your TimeMaster experience</p>
+    <div className="min-h-screen bg-background px-4 py-4 pb-24 safe-top safe-bottom">
+      <div className="w-full max-w-lg mx-auto space-y-4">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-sm text-muted-foreground">Customize your TimeMaster experience</p>
         </div>
 
         {/* User Settings */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="w-5 h-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {isGoogleUser && googleProfilePic ? (
+                <img 
+                  src={googleProfilePic} 
+                  alt="Profile" 
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <SettingsIcon className="w-5 h-5" />
+              )}
               User Profile
             </CardTitle>
-            <CardDescription>Manage your account settings</CardDescription>
+            <CardDescription className="text-xs">Manage your account settings</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-0">
             <div>
-              <Label>Name</Label>
+              <Label className="text-sm">Name</Label>
               <Input
                 value={user?.name || ''}
                 onChange={e => {
@@ -85,10 +106,12 @@ const Settings = () => {
                   }
                 }}
                 placeholder="Your name"
+                className="h-10"
+                disabled={isGoogleUser}
               />
             </div>
             <div>
-              <Label>Email (optional)</Label>
+              <Label className="text-sm">Email</Label>
               <Input
                 value={user?.email || ''}
                 onChange={e => {
@@ -100,173 +123,145 @@ const Settings = () => {
                 }}
                 placeholder="your@email.com"
                 type="email"
+                className="h-10"
+                disabled={isGoogleUser}
               />
+              {isGoogleUser && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Signed in with Google
+                </p>
+              )}
             </div>
+            
+            {/* Sign Out Button */}
+            <Button
+              variant="outline"
+              onClick={handleSignOut}
+              className="w-full mt-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </Button>
           </CardContent>
         </Card>
 
         {/* Timeblock Settings */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="w-5 h-5" />
               Timeblock Presets
             </CardTitle>
-            <CardDescription>
-              {user?.isPremium
-                ? 'Add custom timeblock durations'
-                : 'Upgrade to Premium to add custom timeblocks'}
+            <CardDescription className="text-xs">
+              Manage your timeblock durations
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <CardContent className="space-y-3 pt-0">
+            <div className="grid grid-cols-3 gap-2">
               {timeblocks.map(block => (
                 <div
                   key={block.id}
-                  className="p-3 rounded-lg border text-center bg-muted/50"
+                  className="p-2 rounded-lg border text-center bg-muted/50"
                 >
-                  <Clock className="w-4 h-4 mx-auto mb-1 text-primary" />
-                  <p className="font-medium">{block.label}</p>
+                  <Clock className="w-3 h-3 mx-auto mb-1 text-primary" />
+                  <p className="font-medium text-sm">{block.label}</p>
                 </div>
               ))}
             </div>
 
-            {user?.isPremium && (
-              <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <Label>New Timeblock Duration (minutes)</Label>
-                  <Input
-                    type="number"
-                    value={newBlockDuration}
-                    onChange={e => setNewBlockDuration(parseInt(e.target.value))}
-                    min={5}
-                    max={180}
-                  />
-                </div>
-                <Button onClick={handleAddTimeblock}>Add Timeblock</Button>
+            <div className="flex gap-2 items-end pt-2">
+              <div className="flex-1">
+                <Label className="text-sm">Add Custom (minutes)</Label>
+                <Input
+                  type="number"
+                  value={newBlockDuration}
+                  onChange={e => setNewBlockDuration(parseInt(e.target.value))}
+                  min={5}
+                  max={180}
+                  className="h-10"
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Premium */}
-        <Card className="border-2 border-primary/30 dark:border-primary/50 bg-gradient-to-br from-primary/10 dark:from-primary/20 to-secondary/10 dark:to-secondary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-primary" />
-              Premium Features
-            </CardTitle>
-            <CardDescription>
-              Unlock advanced features and customization
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Premium Status</p>
-                <p className="text-sm text-muted-foreground">
-                  {user?.isPremium ? 'Active' : 'Inactive'}
-                </p>
-              </div>
-              <Switch
-                checked={user?.isPremium || false}
-                onCheckedChange={handleTogglePremium}
-              />
-            </div>
-
-            <div className="space-y-2 pt-4 border-t">
-              <p className="font-medium">Premium Benefits:</p>
-              <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>✓ Custom timeblock durations</li>
-                <li>✓ Advanced reports and analytics</li>
-                <li>✓ Export data to CSV/PDF</li>
-                <li>✓ Cloud sync across devices</li>
-                <li>✓ Premium themes and animations</li>
-                <li>✓ Priority support</li>
-              </ul>
+              <Button onClick={handleAddTimeblock} size="sm" className="h-10 px-4">
+                Add
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Data Management */}
         <Card>
-          <CardHeader>
-            <CardTitle>Data Management</CardTitle>
-            <CardDescription>Backup and restore your data</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Data Management</CardTitle>
+            <CardDescription className="text-xs">Backup and restore your data</CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-3">
-            <Button variant="outline" className="gap-2">
+          <CardContent className="flex gap-2 pt-0">
+            <Button variant="outline" className="gap-2 flex-1 h-10 text-sm">
               <Download className="w-4 h-4" />
-              Export Data
+              Export
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 flex-1 h-10 text-sm">
               <Upload className="w-4 h-4" />
-              Import Data
+              Import
             </Button>
           </CardContent>
         </Card>
 
         {/* Tutorial Management */}
-        <Card className="border-2 border-secondary/30 dark:border-secondary/50 bg-gradient-to-br from-secondary/10 dark:from-secondary/20 to-primary/10 dark:to-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="border-2 border-secondary/30 dark:border-secondary/50 bg-gradient-to-br from-secondary/5 dark:from-secondary/10 to-primary/5 dark:to-primary/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
               <GraduationCap className="w-5 h-5 text-secondary" />
               Interactive Tutorial
             </CardTitle>
-            <CardDescription>
-              Learn how to use TimeMaster with our step-by-step guide
+            <CardDescription className="text-xs">
+              Learn how to use TimeMaster
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <p className="text-sm">
-                The tutorial will guide you through creating workplans, adding tasks, setting daily goals, and tracking your time.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  onClick={() => {
-                    import('react-router-dom').then(({ useNavigate }) => {
-                       // This is a bit hacky inside onClick, better to use hook at top level
-                       // But since we are editing Settings.tsx which already has hooks... wait.
-                    });
-                    startTutorial();
-                    toast({ title: 'Tutorial started!', description: 'Follow the interactive guide to learn TimeMaster.' });
-                  }}
-                  className="gap-2 flex-1"
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  Interactive Tutorial
-                </Button>
-                <Button
-                    variant="outline"
-                    className="gap-2 flex-1"
-                    onClick={() => navigate('/tutorial-docs')}
-                >
-                    <BookOpen className="w-4 h-4" />
-                    Read Guide
-                </Button>
-              </div>
+          <CardContent className="space-y-3 pt-0">
+            <p className="text-xs text-muted-foreground">
+              The tutorial guides you through creating workplans, adding tasks, setting daily goals, and tracking time.
+            </p>
+            <div className="flex gap-2">
               <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    await resetTutorial();
-                    toast({ title: 'Tutorial reset', description: 'You can start the tutorial again anytime.' });
-                  }}
-                  className="w-full text-muted-foreground hover:text-destructive"
-                >
-                  Reset Progress
+                onClick={() => {
+                  startTutorial();
+                  toast({ title: 'Tutorial started!', description: 'Follow the interactive guide.' });
+                }}
+                className="gap-2 flex-1 h-10 text-sm"
+                size="sm"
+              >
+                <GraduationCap className="w-4 h-4" />
+                Start Tutorial
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2 flex-1 h-10 text-sm"
+                size="sm"
+                onClick={() => navigate('/tutorial-docs')}
+              >
+                <BookOpen className="w-4 h-4" />
+                Read Guide
               </Button>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                await resetTutorial();
+                toast({ title: 'Tutorial reset', description: 'You can start the tutorial again anytime.' });
+              }}
+              className="w-full text-xs text-muted-foreground hover:text-destructive h-8"
+            >
+              Reset Progress
+            </Button>
           </CardContent>
         </Card>
 
         {/* App Info */}
         <Card>
-          <CardContent className="pt-6 text-center text-sm text-muted-foreground">
-            <p>TimeMaster v1.0</p>
+          <CardContent className="py-4 text-center text-xs text-muted-foreground">
+            <p className="font-medium">TimeMaster v1.0</p>
             <p className="mt-1">Built with React + TypeScript</p>
-            <p className="mt-1">Installable Progressive Web App</p>
           </CardContent>
         </Card>
       </div>

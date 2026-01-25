@@ -4,4 +4,6 @@
     <string name="title_activity_main">TimeMaster</string>
     <string name="package_name">com.timemaster.app</string>
     <string name="custom_url_scheme">com.timemaster.app</string>
+    <!-- Google Sign-In Server Client ID (Web Client ID) -->
+    <string name="server_client_id">1047058077619-4fe904uv6p98ijcpf1a4u8og1qf9vi7g.apps.googleusercontent.com</string>
 </resources>

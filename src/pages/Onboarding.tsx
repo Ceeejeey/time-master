@@ -7,16 +7,39 @@ import { useTutorial } from '@/contexts/TutorialContext';
 import { ArrowRight, Clock, Target, TrendingUp, Sparkles } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { db } from '@/database';
+import { signInWithGoogle, initGoogleAuth, type GoogleUser } from '@/lib/google-auth';
+import { Capacitor } from '@capacitor/core';
 
 export const OnboardingScreen: React.FC = () => {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [canSubmit, setCanSubmit] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [animationData, setAnimationData] = useState<object | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isGoogleAuthInitialized, setIsGoogleAuthInitialized] = useState(false);
   const { refreshUser } = useAuth();
   const { startTutorial } = useTutorial();
+
+  // Initialize Google Auth on mount
+  useEffect(() => {
+    const initAuth = async () => {
+      const platform = Capacitor.getPlatform();
+      // Only initialize on native platforms
+      if (platform === 'android' || platform === 'ios') {
+        try {
+          await initGoogleAuth();
+          setIsGoogleAuthInitialized(true);
+          console.log('[Onboarding] Google Auth initialized');
+        } catch (error) {
+          console.error('[Onboarding] Failed to initialize Google Auth:', error);
+          // Don't block the app if Google Auth fails to initialize
+        }
+      }
+    };
+    initAuth();
+  }, []);
 
   // Load premium Lottie animation from URL
   useEffect(() => {
@@ -202,6 +225,64 @@ export const OnboardingScreen: React.FC = () => {
     }
   };
 
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setError(null);
+    
+    try {
+      console.log('[Onboarding] Starting Google Sign-In...');
+      
+      // Sign in with Google - this shows the native account picker
+      const googleUser = await signInWithGoogle();
+      console.log('[Onboarding] Google Sign-In successful:', googleUser.email);
+      
+      // Ensure database is ready
+      await db.initialize();
+      
+      // Wait a bit for database to be ready
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Save user with Google account info
+      const userName = googleUser.name || googleUser.givenName || googleUser.email.split('@')[0];
+      
+      await saveUser({
+        id: googleUser.id || '1',
+        name: userName,
+        email: googleUser.email,
+        isPremium: false,
+      });
+      
+      // Store Google-specific info in localStorage for profile picture etc.
+      localStorage.setItem('timemaster_google_profile_pic', googleUser.imageUrl || '');
+      localStorage.setItem('timemaster_google_id', googleUser.id || '');
+      
+      console.log('[Onboarding] ✓ Google user saved:', userName);
+      
+      // Mark that user has completed onboarding
+      localStorage.setItem('timemaster_has_user', 'true');
+      localStorage.setItem('timemaster_google_user', 'true');
+      
+      // Start tutorial
+      startTutorial();
+      
+      // Refresh auth state to trigger navigation to home
+      await refreshUser();
+      
+      console.log('[Onboarding] ✓ Google Sign-In complete! Redirecting...');
+    } catch (error) {
+      console.error('[Onboarding] ✗ Google Sign-In error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google';
+      
+      // Don't show error for user cancellation
+      if (!errorMessage.includes('cancelled') && !errorMessage.includes('canceled')) {
+        setError(errorMessage);
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-teal-500 via-cyan-500 to-teal-600 dark:from-teal-900 dark:via-cyan-900 dark:to-teal-950 p-6 safe-top safe-bottom overflow-hidden relative">
       {/* Floating animated blobs */}
@@ -325,6 +406,48 @@ export const OnboardingScreen: React.FC = () => {
               </span>
             )}
           </Button>
+
+          {/* Divider */}
+          {Capacitor.isNativePlatform() && isGoogleAuthInitialized && (
+            <>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/30"></div>
+                </div>
+                <div className="relative px-4 bg-transparent">
+                  <span className="text-sm text-white/80 font-medium bg-gradient-to-br from-teal-500 via-cyan-500 to-teal-600 dark:from-teal-900 dark:via-cyan-900 dark:to-teal-950 px-2">
+                    or continue with
+                  </span>
+                </div>
+              </div>
+
+              {/* Google Sign-In Button */}
+              <Button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isGoogleLoading || isLoading}
+                className="w-full h-14 text-lg font-bold rounded-xl shadow-2xl bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 border-2 border-white/50 hover:scale-105 hover:shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                size="lg"
+              >
+                {isGoogleLoading ? (
+                  <span className="flex items-center gap-3">
+                    <div className="w-6 h-6 border-4 border-gray-400/30 border-t-gray-600 rounded-full animate-spin" />
+                    <span>Signing in...</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-3">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Sign in with Google</span>
+                  </span>
+                )}
+              </Button>
+            </>
+          )}
         </form>
       </div>
     </div>

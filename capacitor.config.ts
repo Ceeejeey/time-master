@@ -20,6 +20,13 @@ const config: CapacitorConfig = {
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
       androidDatabaseLocation: 'databases'
+    },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      // The Web Client ID from Google Cloud Console
+      // This is used on Android - the Android Client ID is configured via google-services.json
+      serverClientId: process.env.VITE_GOOGLE_CLIENT_ID || '',
+      forceCodeForRefreshToken: true
     }
   }
   
