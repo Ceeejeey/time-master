@@ -865,6 +865,11 @@
   resolved "https://registry.npmjs.org/@capacitor/keyboard/-/keyboard-7.0.3.tgz"
   integrity sha512-BIBKjmky5rOYNhvYhNeDi0MMvjwYZ6YF9JoCYcGKvKY+XLJKtezsEL78XfOlgWZBkbfR8uq3tzktY6PqgoYLKA==
 
+"@capacitor/local-notifications@^7.0.4":
+  version "7.0.4"
+  resolved "https://registry.npmjs.org/@capacitor/local-notifications/-/local-notifications-7.0.4.tgz"
+  integrity sha512-A6xd64dcgWX75w3yrah83JN/NkiBH6kF0oXCFAt2Vrp5potnyNQgasibRyCmIY5RIn3slkDl3mUPkplXaIk8pw==
+
 "@capacitor/splash-screen@^7.0.3":
   version "7.0.3"
   resolved "https://registry.npmjs.org/@capacitor/splash-screen/-/splash-screen-7.0.3.tgz"
@@ -874,6 +879,11 @@
   version "7.0.3"
   resolved "https://registry.npmjs.org/@capacitor/status-bar/-/status-bar-7.0.3.tgz"
   integrity sha512-JyRpVnKwHij9hgPWolF6PK+HT3e2HSPjN11/h2OmKxq8GAdPGARFLv+97eZl0pvuvm0Kka/LpiLb5whXISBg7Q==
+
+"@capawesome/capacitor-android-edge-to-edge-support@^8.0.3":
+  version "8.0.3"
+  resolved "https://registry.npmjs.org/@capawesome/capacitor-android-edge-to-edge-support/-/capacitor-android-edge-to-edge-support-8.0.3.tgz"
+  integrity sha512-b4ZaVQWbweS0SJZ3WTIZ5Q2FAz/qcbOrLMLu8T7KgLJtCYmsLlML4AJWdES7P0VWcU3IGQT7pxZ5nIOQurO9bw==
 
 "@esbuild/linux-x64@0.21.5":
   version "0.21.5"

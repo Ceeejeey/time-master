@@ -1,8 +1,9 @@
-import { Home, Calendar, Clock, BarChart3, Settings, Moon, Sun, Monitor, CalendarCheck } from 'lucide-react';
+import { Home, Calendar, Clock, BarChart3, Settings, Moon, Sun, Monitor, CalendarCheck, Pause, Play } from 'lucide-react';
 import { NavLink } from './NavLink';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTutorial } from '@/contexts/TutorialContext';
+import { useGlobalTimer } from '@/contexts/TimerContext';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -13,11 +14,15 @@ import {
   DropdownMenuLabel,
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { formatTimeHMS } from '@/lib/utils';
 
 const Navigation = () => {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { handleAction } = useTutorial();
+  const { isRunning, isPaused, isOnLongBreak, productiveSeconds, selectedTask, selectedTimeblock } = useGlobalTimer();
+
+  const showTimerIndicator = isRunning || isOnLongBreak;
 
   const getUserInitials = () => {
     if (!user?.name) return 'U';
@@ -109,6 +114,31 @@ const Navigation = () => {
 
       {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t safe-bottom">
+        {/* Floating Timer Indicator */}
+        {showTimerIndicator && (
+          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+            <NavLink
+              to="/timer"
+              className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg border ${
+                isPaused || isOnLongBreak
+                  ? 'bg-orange-500 border-orange-600 text-white'
+                  : 'bg-primary border-primary text-primary-foreground'
+              } animate-pulse`}
+            >
+              {isPaused || isOnLongBreak ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+              <span className="text-xs font-bold tabular-nums">
+                {formatTimeHMS(productiveSeconds)}
+              </span>
+              <span className="text-xs opacity-80 truncate max-w-[80px]">
+                {selectedTask?.title?.substring(0, 10)}{selectedTask?.title && selectedTask.title.length > 10 ? '...' : ''}
+              </span>
+            </NavLink>
+          </div>
+        )}
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => (
             <NavLink

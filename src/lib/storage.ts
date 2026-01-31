@@ -531,3 +531,39 @@ export const resetTutorialProgress = async (): Promise<void> => {
     throw error;
   }
 };
+
+// Break Sessions
+import { BreakSession } from './types';
+
+export const saveBreakSession = async (session: BreakSession): Promise<void> => {
+  try {
+    await db.run(
+      `INSERT INTO break_sessions (startTimestamp, endTimestamp, targetMinutes, actualSeconds)
+       VALUES (?, ?, ?, ?)`,
+      [session.startTimestamp, session.endTimestamp, session.targetMinutes, session.actualSeconds]
+    );
+    console.log('[Storage] Break session saved:', session.actualSeconds, 'seconds');
+  } catch (error) {
+    console.error('Error saving break session:', error);
+    throw error;
+  }
+};
+
+export const getBreakSessions = async (): Promise<BreakSession[]> => {
+  try {
+    const result = await db.query('SELECT * FROM break_sessions ORDER BY startTimestamp DESC');
+    if (!result.values) return [];
+    
+    return result.values.map((row: Record<string, unknown>) => ({
+      id: row.id?.toString() || '',
+      userId: '1',
+      startTimestamp: row.startTimestamp as string,
+      endTimestamp: row.endTimestamp as string,
+      targetMinutes: row.targetMinutes as number,
+      actualSeconds: row.actualSeconds as number,
+    }));
+  } catch (error) {
+    console.error('Error getting break sessions:', error);
+    return [];
+  }
+};

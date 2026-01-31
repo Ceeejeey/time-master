@@ -1,26 +1,40 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
+import { BarChart3, TrendingUp, Clock, AlertTriangle, RefreshCw, Coffee } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { getTodayReport, getWeekReport, getMonthReport } from '@/lib/reports';
-import { ReportData } from '@/lib/types';
+import { ReportData, BreakSession } from '@/lib/types';
+import { getBreakSessions } from '@/lib/storage';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { formatTimeHMS } from '@/lib/utils';
 import { useData } from '@/contexts/DataContext';
 
 const Reports = () => {
   const { tasks, sessions, refreshData } = useData();
+  const [breakSessions, setBreakSessions] = useState<BreakSession[]>([]);
   const [todayReport, setTodayReport] = useState<ReportData | null>(null);
   const [weekReport, setWeekReport] = useState<ReportData | null>(null);
   const [monthReport, setMonthReport] = useState<ReportData | null>(null);
   const [activeTab, setActiveTab] = useState('today');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadReports = () => {
-    setTodayReport(getTodayReport(sessions, tasks));
-    setWeekReport(getWeekReport(sessions, tasks));
-    setMonthReport(getMonthReport(sessions, tasks));
+  const loadBreakSessions = async () => {
+    try {
+      const breaks = await getBreakSessions();
+      setBreakSessions(breaks);
+      return breaks;
+    } catch (error) {
+      console.error('Error loading break sessions:', error);
+      return [];
+    }
+  };
+
+  const loadReports = async () => {
+    const breaks = await loadBreakSessions();
+    setTodayReport(getTodayReport(sessions, tasks, breaks));
+    setWeekReport(getWeekReport(sessions, tasks, breaks));
+    setMonthReport(getMonthReport(sessions, tasks, breaks));
   };
 
   useEffect(() => {
@@ -32,6 +46,7 @@ const Reports = () => {
     setIsRefreshing(true);
     try {
       await refreshData();
+      await loadReports();
     } finally {
       setIsRefreshing(false);
     }
@@ -42,7 +57,8 @@ const Reports = () => {
   const pieData = currentReport ? [
     { name: 'Productive', value: currentReport.totalWorkTime, color: 'hsl(var(--primary))' },
     { name: 'Wasted', value: currentReport.totalWastedTime, color: 'hsl(var(--destructive))' },
-  ] : [];
+    { name: 'Break', value: currentReport.totalBreakTime, color: 'hsl(39 92% 57%)' },
+  ].filter(d => d.value > 0) : [];
 
   const topWastedData = currentReport?.topWastedTasks.map(task => ({
     name: task.taskTitle.length > 20 ? task.taskTitle.substring(0, 20) + '...' : task.taskTitle,
@@ -125,7 +141,7 @@ const Reports = () => {
             {currentReport && (
               <>
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <Card className="border-2 border-primary/30 dark:border-primary/50 bg-gradient-to-br from-primary/10 dark:from-primary/20 to-primary/15 dark:to-primary/25">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -134,7 +150,7 @@ const Reports = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-primary">
+                      <div className="text-2xl md:text-3xl font-bold text-primary">
                         {formatTimeHMS(currentReport.totalWorkTime)}
                       </div>
                     </CardContent>
@@ -148,8 +164,22 @@ const Reports = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-destructive">
+                      <div className="text-2xl md:text-3xl font-bold text-destructive">
                         {formatTimeHMS(currentReport.totalWastedTime)}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-2 border-amber-500/30 dark:border-amber-500/50 bg-gradient-to-br from-amber-500/10 dark:from-amber-500/20 to-amber-500/15 dark:to-amber-500/25">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Coffee className="w-4 h-4 text-amber-500" />
+                        Break Time
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl md:text-3xl font-bold text-amber-500">
+                        {formatTimeHMS(currentReport.totalBreakTime)}
                       </div>
                     </CardContent>
                   </Card>
@@ -162,13 +192,13 @@ const Reports = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-secondary">
+                      <div className="text-2xl md:text-3xl font-bold text-secondary">
                         {currentReport.blocksCompleted}
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-2 border-accent/30 dark:border-accent/50 bg-gradient-to-br from-accent/10 dark:from-accent/20 to-accent/15 dark:to-accent/25">
+                  <Card className="border-2 border-accent/30 dark:border-accent/50 bg-gradient-to-br from-accent/10 dark:from-accent/20 to-accent/15 dark:to-accent/25 col-span-2 md:col-span-1">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-accent" />
@@ -176,7 +206,7 @@ const Reports = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-accent">
+                      <div className="text-2xl md:text-3xl font-bold text-accent">
                         {currentReport.completionRatePercent}
                         <span className="text-lg ml-1">%</span>
                       </div>
@@ -196,7 +226,7 @@ const Reports = () => {
                       <CardDescription className="text-xs sm:text-sm">How you spent your time</CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 pt-0">
-                      {pieData.length > 0 && (pieData[0].value > 0 || pieData[1].value > 0) ? (
+                      {pieData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={280}>
                           <PieChart>
                             <defs>
@@ -207,6 +237,10 @@ const Reports = () => {
                               <linearGradient id="wastedGradient" x1="0" y1="0" x2="1" y2="1">
                                 <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.9} />
                                 <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.6} />
+                              </linearGradient>
+                              <linearGradient id="breakGradient" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="hsl(39 92% 57%)" stopOpacity={0.9} />
+                                <stop offset="100%" stopColor="hsl(39 92% 57%)" stopOpacity={0.6} />
                               </linearGradient>
                             </defs>
                             <Pie
@@ -223,12 +257,19 @@ const Reports = () => {
                               dataKey="value"
                               animationDuration={1000}
                             >
-                              {pieData.map((entry, index) => (
-                                <Cell 
-                                  key={`cell-${index}`} 
-                                  fill={index === 0 ? 'url(#productiveGradient)' : 'url(#wastedGradient)'}
-                                />
-                              ))}
+                              {pieData.map((entry, index) => {
+                                const gradientId = entry.name === 'Productive' 
+                                  ? 'productiveGradient' 
+                                  : entry.name === 'Wasted' 
+                                    ? 'wastedGradient' 
+                                    : 'breakGradient';
+                                return (
+                                  <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={`url(#${gradientId})`}
+                                  />
+                                );
+                              })}
                             </Pie>
                             <Tooltip content={<CustomPieTooltip />} />
                             <Legend 

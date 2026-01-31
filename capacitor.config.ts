@@ -12,7 +12,6 @@ const config: CapacitorConfig = {
   
   android: {
     allowMixedContent: true,
-    captureInput: true,
     webContentsDebuggingEnabled: true
   },
   
@@ -27,6 +26,11 @@ const config: CapacitorConfig = {
       // This is used on Android - the Android Client ID is configured via google-services.json
       serverClientId: process.env.VITE_GOOGLE_CLIENT_ID || '',
       forceCodeForRefreshToken: true
+    },
+    Keyboard: {
+      // Don't resize - let Android handle it with adjustPan
+      resize: 'none',
+      resizeOnFullScreen: false
     }
   }
   

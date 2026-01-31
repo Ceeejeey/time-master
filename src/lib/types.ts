@@ -92,7 +92,17 @@ export interface TimerSession {
 export interface ReportData {
   totalWorkTime: number; // minutes
   totalWastedTime: number; // minutes
+  totalBreakTime: number; // seconds - break time taken
   blocksCompleted: number;
   completionRatePercent: number;
   topWastedTasks: Array<{ taskId: string; taskTitle: string; wastedSeconds: number }>;
+}
+
+export interface BreakSession {
+  id: string;
+  userId: string;
+  startTimestamp: string; // ISO8601
+  endTimestamp: string; // ISO8601
+  targetMinutes: number;
+  actualSeconds: number;
 }

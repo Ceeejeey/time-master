@@ -19,6 +19,11 @@ const TodayGoalForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Scroll to top when form opens
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     // Only load values once when component mounts
     if (todayPlan && !isInitialized) {

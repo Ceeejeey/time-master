@@ -21,6 +21,11 @@ const TodayTaskForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Scroll to top when form opens
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       try {

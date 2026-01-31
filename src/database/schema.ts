@@ -77,4 +77,14 @@ export const CREATE_TABLES = `
     completedSteps TEXT DEFAULT '[]',
     lastUpdatedTimestamp TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Break Sessions Table
+  CREATE TABLE IF NOT EXISTS break_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    startTimestamp TEXT NOT NULL,
+    endTimestamp TEXT NOT NULL,
+    targetMinutes INTEGER NOT NULL,
+    actualSeconds INTEGER NOT NULL,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `;

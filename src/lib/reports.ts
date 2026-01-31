@@ -1,9 +1,10 @@
-import { TimerSession, Task, ReportData } from './types';
+import { TimerSession, Task, ReportData, BreakSession } from './types';
 import { parseISO, isWithinInterval, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
 export const generateReport = (
   sessions: TimerSession[],
   tasks: Task[],
+  breakSessions: BreakSession[],
   startDate: Date,
   endDate: Date
 ): ReportData => {
@@ -13,9 +14,16 @@ export const generateReport = (
     return isWithinInterval(sessionDate, { start: startDate, end: endDate });
   });
 
+  // Filter break sessions within date range
+  const filteredBreakSessions = breakSessions.filter(session => {
+    const sessionDate = parseISO(session.startTimestamp);
+    return isWithinInterval(sessionDate, { start: startDate, end: endDate });
+  });
+
   // Calculate totals in seconds (not minutes)
   const totalWorkTime = filteredSessions.reduce((sum, s) => sum + (s.productiveSeconds || 0), 0);
   const totalWastedTime = filteredSessions.reduce((sum, s) => sum + (s.wastedSeconds || 0), 0);
+  const totalBreakTime = filteredBreakSessions.reduce((sum, s) => sum + (s.actualSeconds || 0), 0);
 
   const blocksCompleted = filteredSessions.filter(s => s.completed).length;
   
@@ -45,23 +53,24 @@ export const generateReport = (
   return {
     totalWorkTime,
     totalWastedTime,
+    totalBreakTime,
     blocksCompleted,
     completionRatePercent,
     topWastedTasks,
   };
 };
 
-export const getTodayReport = (sessions: TimerSession[], tasks: Task[]): ReportData => {
+export const getTodayReport = (sessions: TimerSession[], tasks: Task[], breakSessions: BreakSession[] = []): ReportData => {
   const today = new Date();
-  return generateReport(sessions, tasks, startOfDay(today), endOfDay(today));
+  return generateReport(sessions, tasks, breakSessions, startOfDay(today), endOfDay(today));
 };
 
-export const getWeekReport = (sessions: TimerSession[], tasks: Task[]): ReportData => {
+export const getWeekReport = (sessions: TimerSession[], tasks: Task[], breakSessions: BreakSession[] = []): ReportData => {
   const today = new Date();
-  return generateReport(sessions, tasks, startOfWeek(today), endOfWeek(today));
+  return generateReport(sessions, tasks, breakSessions, startOfWeek(today), endOfWeek(today));
 };
 
-export const getMonthReport = (sessions: TimerSession[], tasks: Task[]): ReportData => {
+export const getMonthReport = (sessions: TimerSession[], tasks: Task[], breakSessions: BreakSession[] = []): ReportData => {
   const today = new Date();
-  return generateReport(sessions, tasks, startOfMonth(today), endOfMonth(today));
+  return generateReport(sessions, tasks, breakSessions, startOfMonth(today), endOfMonth(today));
 };

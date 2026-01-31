@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,11 @@ const WorkplanForm = () => {
   const { handleAction } = useTutorial();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'create';
+
+  // Scroll to top when form opens
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const [form, setForm] = useState({
     title: '',

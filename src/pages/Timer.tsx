@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Play, Pause, Square, Clock, Coffee } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Play, Pause, Square, Clock, Coffee, CheckCircle2, ChevronRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { getTimeblocks, getTodayPlan } from '@/lib/storage';
-import { Task, Timeblock, TodayPlan } from '@/lib/types';
-import { useTimer } from '@/hooks/useTimer';
+import { Timeblock, TodayPlan } from '@/lib/types';
+import { useGlobalTimer } from '@/contexts/TimerContext';
+import { useBreak } from '@/contexts/BreakContext';
 import { getPriorityColor, getPriorityLabel } from '@/lib/priority';
 import { format } from 'date-fns';
 import { formatTimeHMS } from '@/lib/utils';
@@ -16,31 +27,38 @@ import { useTutorial } from '@/contexts/TutorialContext';
 
 const Timer = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { tasks } = useData();
   const { handleAction } = useTutorial();
+  const { openBreakDialog } = useBreak();
   const [timeblocks, setTimeblocks] = useState<Timeblock[]>([]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [selectedTimeblock, setSelectedTimeblock] = useState<Timeblock | null>(null);
-  const [todayPlan, setTodayPlan] = useState<TodayPlan | null>(null);
+  const [localTodayPlan, setLocalTodayPlan] = useState<TodayPlan | null>(null);
   const [isFromToday, setIsFromToday] = useState(false);
 
   const {
     session,
-    elapsedSeconds,
+    selectedTask,
+    selectedTimeblock,
     productiveSeconds,
     wastedSeconds,
     isPaused,
+    isRunning,
+    isStopped,
+    isOnLongBreak,
+    isTargetReached,
+    remainingBlocks,
+    setSelectedTask,
+    setSelectedTimeblock,
     startTimer,
     pauseTimer,
     resumeTimer,
     stopTimer,
-    takeLongBreak,
     resumeFromLongBreak,
     getProgress,
-    isRunning,
-    isStopped,
-    isOnLongBreak,
-  } = useTimer(selectedTask, selectedTimeblock);
+    startNextBlock,
+    dismissTargetReached,
+    resetTimer,
+  } = useGlobalTimer();
 
   // Tutorial triggers for timer
   useEffect(() => {
@@ -57,43 +75,45 @@ const Timer = () => {
       const timeblocksData = await getTimeblocks();
       setTimeblocks(timeblocksData);
 
-      // Pre-select task from URL if provided
-      const taskId = searchParams.get('taskId');
-      if (taskId) {
-        const task = tasks.find(t => t.id === taskId);
-        if (task) {
-          setSelectedTask(task);
-          
-          // Check if this task is from today's plan
-          const today = format(new Date(), 'yyyy-MM-dd');
-          const todayPlanData = await getTodayPlan(today);
-          if (todayPlanData && todayPlanData.tasks.some(t => t.taskId === taskId)) {
-            setTodayPlan(todayPlanData);
-            setIsFromToday(true);
+      // Only pre-select task if timer is not already running
+      if (!isRunning && !isOnLongBreak) {
+        const taskId = searchParams.get('taskId');
+        if (taskId) {
+          const task = tasks.find(t => t.id === taskId);
+          if (task) {
+            setSelectedTask(task);
             
-            // Create a virtual timeblock with today's duration
-            const virtualTimeblock: Timeblock = {
-              id: `today-${todayPlanData.timeblockDuration}`,
-              label: `${todayPlanData.timeblockDuration} min`,
-              durationMinutes: todayPlanData.timeblockDuration,
-            };
-            setSelectedTimeblock(virtualTimeblock);
-          } else {
-            // Default timeblock for non-today tasks
-            if (timeblocksData.length > 0) {
-              setSelectedTimeblock(timeblocksData[1]); // 30 min default
+            // Check if this task is from today's plan
+            const today = format(new Date(), 'yyyy-MM-dd');
+            const todayPlanData = await getTodayPlan(today);
+            if (todayPlanData && todayPlanData.tasks.some(t => t.taskId === taskId)) {
+              setLocalTodayPlan(todayPlanData);
+              setIsFromToday(true);
+              
+              // Create a virtual timeblock with today's duration
+              const virtualTimeblock: Timeblock = {
+                id: `today-${todayPlanData.timeblockDuration}`,
+                label: `${todayPlanData.timeblockDuration} min`,
+                durationMinutes: todayPlanData.timeblockDuration,
+              };
+              setSelectedTimeblock(virtualTimeblock);
+            } else {
+              // Default timeblock for non-today tasks
+              if (timeblocksData.length > 0) {
+                setSelectedTimeblock(timeblocksData[1]); // 30 min default
+              }
             }
           }
-        }
-      } else {
-        // Default timeblock when no task selected
-        if (timeblocksData.length > 0) {
-          setSelectedTimeblock(timeblocksData[1]); // 30 min default
+        } else {
+          // Default timeblock when no task selected
+          if (timeblocksData.length > 0 && !selectedTimeblock) {
+            setSelectedTimeblock(timeblocksData[1]); // 30 min default
+          }
         }
       }
     };
     loadData();
-  }, [searchParams, tasks]);
+  }, [searchParams, tasks, isRunning, isOnLongBreak]);
 
   const formatTime = (seconds: number) => {
     return formatTimeHMS(seconds);
@@ -102,21 +122,83 @@ const Timer = () => {
   const targetSeconds = selectedTimeblock ? selectedTimeblock.durationMinutes * 60 : 0;
   const progress = getProgress();
 
+  const handleStartNextBlock = () => {
+    startNextBlock();
+  };
+
+  const handleFinishTask = () => {
+    dismissTargetReached();
+    resetTimer();
+    navigate('/today');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-2 sm:p-4">
+      {/* Target Reached Dialog */}
+      <AlertDialog open={isTargetReached} onOpenChange={(open) => !open && dismissTargetReached()}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Trophy className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <AlertDialogTitle className="text-center text-xl">
+              🎉 Timeblock Complete!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3">
+              <p>
+                Great job! You've completed a <strong>{selectedTimeblock?.durationMinutes} minute</strong> focus session on <strong>"{selectedTask?.title}"</strong>.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3 mt-4 p-3 bg-muted/50 rounded-lg">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Productive</p>
+                  <p className="text-lg font-bold text-primary">{formatTime(productiveSeconds)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">Wasted</p>
+                  <p className="text-lg font-bold text-destructive">{formatTime(wastedSeconds)}</p>
+                </div>
+              </div>
+
+              {remainingBlocks > 0 && (
+                <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                  <p className="text-sm font-medium text-primary">
+                    📋 {remainingBlocks} more block{remainingBlocks > 1 ? 's' : ''} remaining for this task
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={handleFinishTask} className="w-full sm:w-auto">
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Done for now
+            </AlertDialogCancel>
+            {remainingBlocks > 0 && (
+              <AlertDialogAction onClick={handleStartNextBlock} className="w-full sm:w-auto">
+                <ChevronRight className="w-4 h-4 mr-2" />
+                Start Next Block
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="w-full max-w-2xl mx-auto">
         <div className="text-center mb-4 sm:mb-6 md:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Focus Timer</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Stay focused and track your productivity</p>
         </div>
 
-        {!isRunning ? (
+        {!isRunning && !isOnLongBreak && !isStopped ? (
           <Card className="mb-4 sm:mb-6">
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg sm:text-xl">Setup Timer</CardTitle>
               <CardDescription className="text-sm sm:text-base">
                 {isFromToday 
-                  ? `Ready to work on "${selectedTask?.title}" for ${todayPlan?.timeblockDuration} minutes`
+                  ? `Ready to work on "${selectedTask?.title}" for ${localTodayPlan?.timeblockDuration} minutes`
                   : "Select a task and timeblock to begin"
                 }
               </CardDescription>
@@ -135,7 +217,7 @@ const Timer = () => {
                       const today = format(new Date(), 'yyyy-MM-dd');
                       const todayPlanData = await getTodayPlan(today);
                       if (todayPlanData && todayPlanData.tasks.some(t => t.taskId === id)) {
-                        setTodayPlan(todayPlanData);
+                        setLocalTodayPlan(todayPlanData);
                         setIsFromToday(true);
                         
                         // Create a virtual timeblock with today's duration
@@ -147,7 +229,7 @@ const Timer = () => {
                         setSelectedTimeblock(virtualTimeblock);
                       } else {
                         setIsFromToday(false);
-                        setTodayPlan(null);
+                        setLocalTodayPlan(null);
                         // Set default timeblock for non-today tasks
                         if (timeblocks.length > 0) {
                           setSelectedTimeblock(timeblocks[1]); // 30 min default
@@ -197,14 +279,14 @@ const Timer = () => {
                 </div>
               )}
 
-              {isFromToday && todayPlan && (
+              {isFromToday && localTodayPlan && (
                 <div className="p-3 sm:p-4 rounded-lg bg-primary/10 border border-primary/20">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     <span className="font-medium text-sm sm:text-base">Today's Timeblock Duration</span>
                   </div>
                   <p className="text-center text-xl sm:text-2xl font-bold text-primary">
-                    {todayPlan.timeblockDuration} minutes
+                    {localTodayPlan.timeblockDuration} minutes
                   </p>
                   <p className="text-center text-xs sm:text-sm text-muted-foreground mt-1">
                     Set in your daily plan
@@ -269,7 +351,7 @@ const Timer = () => {
               </Button>
             </CardContent>
           </Card>
-        ) : (
+        ) : isRunning ? (
           <div className="space-y-6">
             {/* Timer Display */}
             <Card 
@@ -373,7 +455,7 @@ const Timer = () => {
                       </Button>
                     )}
                     <Button
-                      onClick={takeLongBreak}
+                      onClick={openBreakDialog}
                       variant="outline"
                       size="lg"
                       className="flex-1 min-w-[100px] gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
@@ -432,6 +514,102 @@ const Timer = () => {
               </Card>
             )}
           </div>
+        ) : (
+          // Timer stopped state - show setup again
+          <Card className="mb-4 sm:mb-6">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl">Setup Timer</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Select a task and timeblock to begin a new session
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Select Task</label>
+                <Select
+                  value={selectedTask?.id}
+                  onValueChange={async (id) => {
+                    const task = tasks.find(t => t.id === id);
+                    setSelectedTask(task || null);
+                    
+                    if (task) {
+                      const today = format(new Date(), 'yyyy-MM-dd');
+                      const todayPlanData = await getTodayPlan(today);
+                      if (todayPlanData && todayPlanData.tasks.some(t => t.taskId === id)) {
+                        setLocalTodayPlan(todayPlanData);
+                        setIsFromToday(true);
+                        const virtualTimeblock: Timeblock = {
+                          id: `today-${todayPlanData.timeblockDuration}`,
+                          label: `${todayPlanData.timeblockDuration} min`,
+                          durationMinutes: todayPlanData.timeblockDuration,
+                        };
+                        setSelectedTimeblock(virtualTimeblock);
+                      } else {
+                        setIsFromToday(false);
+                        setLocalTodayPlan(null);
+                        if (timeblocks.length > 0) {
+                          setSelectedTimeblock(timeblocks[1]);
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger className="touch-manipulation h-11">
+                    <SelectValue placeholder="Choose a task" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tasks.map(task => (
+                      <SelectItem key={task.id} value={task.id} className="py-3 touch-manipulation">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: getPriorityColor(task.priorityQuadrant) }}
+                          />
+                          <span className="truncate text-sm sm:text-base">{task.title}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {!isFromToday && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Select Timeblock</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                    {timeblocks.map(block => (
+                      <button
+                        key={block.id}
+                        onClick={() => setSelectedTimeblock(block)}
+                        className={`p-3 sm:p-4 rounded-lg border-2 transition-all touch-manipulation ${
+                          selectedTimeblock?.id === block.id
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1" />
+                        <p className="text-xs sm:text-sm font-medium">{block.label}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={() => {
+                  handleAction('click-start-timer-setup');
+                  resetTimer();
+                  startTimer();
+                }}
+                disabled={!selectedTask || !selectedTimeblock}
+                className="w-full gap-2"
+                size="lg"
+              >
+                <Play className="w-5 h-5" />
+                Start New Session
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

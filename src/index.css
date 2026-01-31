@@ -28,6 +28,8 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  /* Smooth transition for keyboard padding */
+  transition: padding-bottom 0.2s ease-out;
 }
 
 #root {
@@ -38,6 +40,13 @@ body {
 /* Improve touch targets for mobile */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Input styling for better text rendering */
+input,
+textarea {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer base {

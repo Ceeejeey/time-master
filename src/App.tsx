@@ -6,9 +6,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { DataProvider } from "./contexts/DataContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TutorialProvider, useTutorial } from "./contexts/TutorialContext";
+import { TimerProvider } from "./contexts/TimerContext";
+import { BreakProvider } from "./contexts/BreakContext";
 import { OnboardingScreen } from "./pages/Onboarding";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { TutorialSuccess } from "./components/TutorialSuccess";
+import { BreakFAB } from "./components/BreakFAB";
+import { BreakOverlay } from "./components/BreakOverlay";
 import Index from "./pages/Home";
 import Today from "./pages/Today";
 import Workplan from "./pages/Workplan";
@@ -52,27 +56,33 @@ const AppContent = () => {
   }
 
   return (
-    <DataProvider>
-      <Navigation />
-      <main className="pt-14 pb-16 min-h-screen">
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/today" element={<Today />} />
-          <Route path="/today/goal" element={<TodayGoalForm />} />
-          <Route path="/today/task/new" element={<TodayTaskForm />} />
-          <Route path="/workplan" element={<Workplan />} />
-          <Route path="/workplan/new" element={<WorkplanForm />} />
-          <Route path="/workplan/task/new" element={<TaskForm />} />
-          <Route path="/workplan/task/edit" element={<TaskForm />} />
-          <Route path="/timer" element={<Timer />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/tutorial-docs" element={<TutorialDocs />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      <TutorialOverlay />
-    </DataProvider>
+    <TimerProvider>
+      <BreakProvider>
+        <DataProvider>
+          <Navigation />
+          <BreakFAB />
+          <BreakOverlay />
+          <main className="pt-14 pb-16 min-h-screen">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/today" element={<Today />} />
+            <Route path="/today/goal" element={<TodayGoalForm />} />
+            <Route path="/today/task/new" element={<TodayTaskForm />} />
+            <Route path="/workplan" element={<Workplan />} />
+            <Route path="/workplan/new" element={<WorkplanForm />} />
+            <Route path="/workplan/task/new" element={<TaskForm />} />
+            <Route path="/workplan/task/edit" element={<TaskForm />} />
+            <Route path="/timer" element={<Timer />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/tutorial-docs" element={<TutorialDocs />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </main>
+          <TutorialOverlay />
+        </DataProvider>
+      </BreakProvider>
+    </TimerProvider>
   );
 };
 

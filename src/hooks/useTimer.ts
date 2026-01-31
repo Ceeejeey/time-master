@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TimerSession, Task, Timeblock } from '@/lib/types';
 import { saveTimerSession, getTodayPlan, saveTodayPlan, getCurrentUserId } from '@/lib/storage';
 import { calculateSessionStats, isSessionPaused, getTotalPauseTimeSeconds, isSessionRunning } from '@/lib/timer';
+import { timerNotificationService, formatTimeForNotification } from '@/lib/timer-notification';
 import { format } from 'date-fns';
 
 export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
@@ -10,6 +11,49 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
   const [productiveSeconds, setProductiveSeconds] = useState(0);
   const [wastedSeconds, setWastedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Refs for notification callbacks
+  const pauseTimerRef = useRef<(() => Promise<void>) | null>(null);
+  const resumeTimerRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Initialize notification service
+  useEffect(() => {
+    timerNotificationService.initialize();
+  }, []);
+
+  // Update notification when timer state changes
+  useEffect(() => {
+    if (!session || !timeblock || !task) {
+      timerNotificationService.stopUpdates();
+      return;
+    }
+
+    if (session.isStopped || session.endTimestamp) {
+      timerNotificationService.stopUpdates();
+      return;
+    }
+
+    const targetSeconds = timeblock.durationMinutes * 60;
+
+    // Set up notification callbacks
+    timerNotificationService.setCallbacks(
+      () => pauseTimerRef.current?.(),
+      () => resumeTimerRef.current?.()
+    );
+
+    // Start notification updates
+    timerNotificationService.startUpdates(() => ({
+      taskTitle: task.title,
+      productiveTime: formatTimeForNotification(productiveSeconds),
+      targetTime: formatTimeForNotification(targetSeconds),
+      wastedTime: formatTimeForNotification(wastedSeconds),
+      isPaused: isPaused || session.isOnLongBreak,
+    }));
+
+    return () => {
+      // Don't stop updates on cleanup - let app state change handle it
+    };
+  }, [session, timeblock, task, productiveSeconds, wastedSeconds, isPaused]);
 
   // Timer tick effect
   useEffect(() => {
@@ -102,6 +146,12 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     console.log('[Timer] Resumed');
   }, [session, timeblock]);
 
+  // Keep refs updated with latest functions
+  useEffect(() => {
+    pauseTimerRef.current = pauseTimer;
+    resumeTimerRef.current = resumeTimer;
+  }, [pauseTimer, resumeTimer]);
+
   const stopTimer = useCallback(async () => {
     if (!session || !timeblock || !task) return;
 
@@ -169,6 +219,9 @@ export const useTimer = (task: Task | null, timeblock: Timeblock | null) => {
     } catch (error) {
       console.error('Error updating today plan:', error);
     }
+    
+    // Stop notification service
+    timerNotificationService.stopUpdates();
     
     console.log('[Timer] Stopped - Productive:', stats.productiveSeconds, 'Wasted:', stats.wastedSeconds);
   }, [session, timeblock, task, productiveSeconds]);

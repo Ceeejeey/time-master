@@ -17,39 +17,9 @@ const TaskForm = () => {
   const workplanId = searchParams.get('workplanId');
   const mode = taskId ? 'edit' : 'create';
 
-  // Debug: Log mount and check for scroll blockers
+  // Scroll to top when form opens
   useEffect(() => {
-    console.log('[TaskForm] Component mounted');
-    console.log('[TaskForm] Document body overflow:', window.getComputedStyle(document.body).overflow);
-    console.log('[TaskForm] Document body overflowY:', window.getComputedStyle(document.body).overflowY);
-    console.log('[TaskForm] HTML overflow:', window.getComputedStyle(document.documentElement).overflow);
-    console.log('[TaskForm] HTML overflowY:', window.getComputedStyle(document.documentElement).overflowY);
-    
-    // Check for any elements with pointer-events: none or touch-action: none
-    const root = document.getElementById('root');
-    if (root) {
-      console.log('[TaskForm] #root overflow:', window.getComputedStyle(root).overflow);
-      console.log('[TaskForm] #root pointerEvents:', window.getComputedStyle(root).pointerEvents);
-      console.log('[TaskForm] #root touchAction:', window.getComputedStyle(root).touchAction);
-    }
-    
-    // Check for fixed/absolute positioned overlays
-    const allElements = document.querySelectorAll('*');
-    let overlaysFound = 0;
-    allElements.forEach(el => {
-      const style = window.getComputedStyle(el);
-      if ((style.position === 'fixed' || style.position === 'absolute') && 
-          parseInt(style.zIndex) > 50 && 
-          style.display !== 'none') {
-        overlaysFound++;
-        console.log('[TaskForm] Overlay element found:', el.tagName, el.className, 'z-index:', style.zIndex);
-      }
-    });
-    console.log('[TaskForm] Total overlays with z-index > 50:', overlaysFound);
-    
-    return () => {
-      console.log('[TaskForm] Component unmounting');
-    };
+    window.scrollTo(0, 0);
   }, []);
 
   const [form, setForm] = useState<{

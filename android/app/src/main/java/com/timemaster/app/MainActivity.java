@@ -7,14 +7,24 @@ import android.webkit.WebSettings;
 import android.view.View;
 
 public class MainActivity extends BridgeActivity {
+    
+    private WebView customWebView;
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Register custom plugins before super.onCreate
+        registerPlugin(TimerNotificationPlugin.class);
+        
         super.onCreate(savedInstanceState);
         
         // Get the WebView
         WebView webView = this.getBridge().getWebView();
+        customWebView = webView;
         
-        // Force hardware acceleration for WebView to reduce input lag
+        // Enable WebView debugging
+        WebView.setWebContentsDebuggingEnabled(true);
+        
+        // Use hardware acceleration (default, best performance)
         webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
         
         // Enable scrolling
@@ -22,20 +32,30 @@ public class MainActivity extends BridgeActivity {
         webView.setHorizontalScrollBarEnabled(false);
         webView.setScrollbarFadingEnabled(true);
         
-        // Make sure WebView is focusable and can receive touch events
+        // Make WebView focusable
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
-        
-        // Enable nested scrolling for better compatibility with coordinator layout
         webView.setNestedScrollingEnabled(true);
         
-        // Configure WebSettings for better scrolling
+        // Configure WebSettings
         WebSettings webSettings = webView.getSettings();
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setDomStorageEnabled(true);
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setSupportMultipleWindows(false);
+        webSettings.setTextZoom(100);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         
-        // Log for debugging
-        android.util.Log.d("MainActivity", "WebView configured for scrolling");
+        android.util.Log.d("MainActivity", "WebView configured");
+    }
+    
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        // Ensure WebView properly handles focus for keyboard input
+        if (hasFocus && customWebView != null) {
+            customWebView.requestFocus();
+        }
     }
 }

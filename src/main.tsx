@@ -2,12 +2,43 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import "./lib/mobile-utils.css";
-import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import { Keyboard } from '@capacitor/keyboard';
 import { Capacitor } from '@capacitor/core';
 import { db } from './database';
 
 // Initialize database at app startup
 console.log('[App] Starting app initialization...');
+
+// Setup keyboard handling for mobile
+const setupKeyboardHandling = () => {
+  if (!Capacitor.isNativePlatform()) return;
+  
+  let keyboardHeight = 0;
+  
+  // Listen for keyboard show
+  Keyboard.addListener('keyboardWillShow', (info) => {
+    console.log('[Keyboard] Will show, height:', info.keyboardHeight);
+    keyboardHeight = info.keyboardHeight;
+    document.body.style.paddingBottom = `${keyboardHeight}px`;
+    
+    // Scroll focused element into view at the top
+    setTimeout(() => {
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+        activeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  });
+  
+  // Listen for keyboard hide
+  Keyboard.addListener('keyboardWillHide', () => {
+    console.log('[Keyboard] Will hide');
+    keyboardHeight = 0;
+    document.body.style.paddingBottom = '0px';
+  });
+  
+  console.log('[App] ✓ Keyboard listeners registered');
+};
 
 // Wait for Capacitor to be fully ready before any initialization
 const initApp = async () => {
@@ -20,11 +51,10 @@ const initApp = async () => {
     const platform = Capacitor.getPlatform();
     console.log('[App] Platform:', platform);
     
-    // Configure keyboard behavior for better mobile input experience
+    // Setup keyboard handling
     if (Capacitor.isNativePlatform()) {
       try {
-        await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
-        await Keyboard.setScroll({ isDisabled: false });
+        setupKeyboardHandling();
         console.log('[App] ✓ Keyboard configured');
       } catch (e) {
         console.warn('[App] Keyboard configuration failed:', e);
