@@ -255,8 +255,26 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       if (plan) {
         const taskInPlan = plan.tasks.find(t => t.taskId === selectedTask.id);
         if (taskInPlan) {
+          // Count how many blocks are now completed for this instance
+          const trackingId = taskInPlan.instanceId || taskInPlan.taskId;
+          const allSessions = await getTimerSessions();
+          const completedBlocksForTask = allSessions.filter(
+            s => s.taskId === trackingId && s.completed && s.isStopped
+          ).length; // Session we just saved is already in DB
+          
+          // Auto-mark task as completed if all blocks are done
+          const allBlocksDone = completedBlocksForTask >= taskInPlan.timeblockCount;
+          
+          const updatedTasks = plan.tasks.map(t => {
+            if (t.id === taskInPlan.id) {
+              return { ...t, completed: allBlocksDone };
+            }
+            return t;
+          });
+          
           const updatedPlan = {
             ...plan,
+            tasks: updatedTasks,
             completedTimeblocks: plan.completedTimeblocks + 1,
           };
           await saveTodayPlan(updatedPlan);
@@ -381,7 +399,8 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     }
     const calculatedWasted = remainingSeconds + totalPauseSeconds;
     
-    const completed = currentProductive >= targetSeconds * 0.9;
+    // Stopping a block = completing it (block is done regardless of how much target was achieved)
+    const completed = true;
 
     const finalSession: TimerSession = {
       ...session,
@@ -402,10 +421,29 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       const plan = await getTodayPlan(today);
       
       if (plan) {
+        // Find the task in today's plan
         const taskInPlan = plan.tasks.find(t => t.taskId === selectedTask.id);
         if (taskInPlan) {
+          // Count how many blocks are now completed for this instance
+          const trackingId = taskInPlan.instanceId || taskInPlan.taskId;
+          const allSessions = await getTimerSessions();
+          const completedBlocksForTask = allSessions.filter(
+            s => s.taskId === trackingId && s.completed && s.isStopped
+          ).length; // Session we just saved is already in DB
+          
+          // Auto-mark task as completed if all blocks are done
+          const allBlocksDone = completedBlocksForTask >= taskInPlan.timeblockCount;
+          
+          const updatedTasks = plan.tasks.map(t => {
+            if (t.id === taskInPlan.id) {
+              return { ...t, completed: allBlocksDone };
+            }
+            return t;
+          });
+          
           const updatedPlan = {
             ...plan,
+            tasks: updatedTasks,
             completedTimeblocks: plan.completedTimeblocks + 1,
           };
           await saveTodayPlan(updatedPlan);

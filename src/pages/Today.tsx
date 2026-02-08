@@ -133,30 +133,6 @@ const Today = () => {
     await saveTodayPlan(updatedPlan);
   };
 
-  const handleToggleComplete = async (todayTaskId: string) => {
-    if (!todayPlan) return;
-
-    const updatedTasks = todayPlan.tasks.map((t) => {
-      if (t.id === todayTaskId) {
-        return { ...t, completed: !t.completed };
-      }
-      return t;
-    });
-
-    const completedCount = updatedTasks
-      .filter((t) => t.completed)
-      .reduce((sum, t) => sum + t.timeblockCount, 0);
-
-    const updatedPlan = {
-      ...todayPlan,
-      tasks: updatedTasks,
-      completedTimeblocks: completedCount,
-    };
-
-    setTodayPlan(updatedPlan);
-    await saveTodayPlan(updatedPlan);
-  };
-
   const handleClearTodayData = async () => {
     try {
       await clearAllTodayData(today);
@@ -410,25 +386,27 @@ const Today = () => {
     ${
       isTaskFullyCompleted
         ? "bg-primary/10 border-primary/50 shadow-primary/10"
-        : todayTask.completed
-        ? "bg-muted/40 border-muted-foreground/30"
         : "bg-card/50 border-zinc-200 dark:border-zinc-700 active:scale-[0.99]"
     }
   `}
                     >
-                      {/* Top Area: Check + Title + Priority */}
+                      {/* Top Area: Status Icon + Title + Priority */}
                       <div className="flex items-start gap-4">
-                        {/* Checkbox */}
-                        <button
-                          onClick={() => handleToggleComplete(todayTask.id)}
-                          className="touch-manipulation mt-1"
-                        >
-                          {isTaskFullyCompleted || todayTask.completed ? (
+                        {/* Completion Status Icon (auto - not clickable) */}
+                        <div className="mt-1">
+                          {isTaskFullyCompleted ? (
                             <CheckCircle2 className="w-6 h-6 text-primary" />
+                          ) : completedBlocks > 0 ? (
+                            <div className="relative w-6 h-6">
+                              <Circle className="w-6 h-6 text-primary/30" />
+                              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-primary">
+                                {completedBlocks}
+                              </span>
+                            </div>
                           ) : (
-                            <Circle className="w-6 h-6 text-muted-foreground" />
+                            <Circle className="w-6 h-6 text-muted-foreground/40" />
                           )}
-                        </button>
+                        </div>
 
                         {/* Title + Chips */}
                         <div className="flex-1 min-w-0">
@@ -448,8 +426,6 @@ const Today = () => {
                               className={`font-semibold text-base ${
                                 isTaskFullyCompleted
                                   ? "line-through text-primary"
-                                  : todayTask.completed
-                                  ? "line-through text-muted-foreground"
                                   : "text-foreground"
                               }`}
                             >
@@ -517,7 +493,7 @@ const Today = () => {
 
                       {/* Bottom Actions */}
                       <div className="flex items-center gap-2 mt-4">
-                        {!todayTask.completed && (
+                        {!isTaskFullyCompleted && (
                           <Button
                             size="sm"
                             className="flex-1 gap-2"
@@ -529,7 +505,7 @@ const Today = () => {
                             data-tutorial="start-task-button"
                           >
                             <Play className="w-4 h-4" />
-                            Start
+                            {completedBlocks > 0 ? `Continue (${remainingBlocksForTask} left)` : 'Start'}
                           </Button>
                         )}
 
