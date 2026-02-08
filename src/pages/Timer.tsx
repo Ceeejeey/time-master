@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Play, Pause, Square, Clock, Coffee, CheckCircle2, ChevronRight, Trophy } from 'lucide-react';
+import { Play, Pause, Square, Clock, Coffee, CheckCircle2, ChevronRight, Trophy, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { getTimeblocks, getTodayPlan } from '@/lib/storage';
-import { Timeblock, TodayPlan } from '@/lib/types';
+import { Timeblock, TodayPlan, TodayTask } from '@/lib/types';
 import { useGlobalTimer } from '@/contexts/TimerContext';
 import { useBreak } from '@/contexts/BreakContext';
 import { getPriorityColor, getPriorityLabel } from '@/lib/priority';
@@ -28,7 +28,7 @@ import { useTutorial } from '@/contexts/TutorialContext';
 const Timer = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { tasks } = useData();
+  const { tasks, sessions, todayPlan: contextTodayPlan } = useData();
   const { handleAction } = useTutorial();
   const { openBreakDialog } = useBreak();
   const [timeblocks, setTimeblocks] = useState<Timeblock[]>([]);
@@ -133,6 +133,45 @@ const Timer = () => {
     navigate('/today');
   };
 
+  // Get today's incomplete tasks with remaining block info
+  const todayTasks = useMemo(() => {
+    if (!contextTodayPlan) return [];
+    return contextTodayPlan.tasks
+      .map(todayTask => {
+        const task = tasks.find(t => t.id === todayTask.taskId);
+        if (!task) return null;
+        const trackingId = todayTask.instanceId || todayTask.taskId;
+        const completedBlocks = sessions.filter(
+          s => s.taskId === trackingId && s.completed && s.isStopped
+        ).length;
+        const remainingBlocksForTask = todayTask.timeblockCount - completedBlocks;
+        return {
+          todayTask,
+          task,
+          trackingId,
+          completedBlocks,
+          remainingBlocks: remainingBlocksForTask,
+          isCompleted: remainingBlocksForTask <= 0,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null && !item.isCompleted);
+  }, [contextTodayPlan, tasks, sessions]);
+
+  const handleQuickStartTodayTask = async (item: typeof todayTasks[number]) => {
+    const { task, trackingId } = item;
+    setSelectedTask(task, trackingId);
+    
+    const duration = contextTodayPlan?.timeblockDuration || 25;
+    const virtualTimeblock: Timeblock = {
+      id: `today-${duration}`,
+      label: `${duration} min`,
+      durationMinutes: duration,
+    };
+    setSelectedTimeblock(virtualTimeblock);
+    setLocalTodayPlan(contextTodayPlan);
+    setIsFromToday(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-2 sm:p-4">
       {/* Target Reached Dialog */}
@@ -194,16 +233,79 @@ const Timer = () => {
         </div>
 
         {!isRunning && !isOnLongBreak && !isStopped ? (
-          <Card className="mb-4 sm:mb-6">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Setup Timer</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                {isFromToday 
-                  ? `Ready to work on "${selectedTask?.title}" for ${localTodayPlan?.timeblockDuration} minutes`
-                  : "Select a task and timeblock to begin"
-                }
-              </CardDescription>
-            </CardHeader>
+          <div className="space-y-4 sm:space-y-6">
+            {/* Today's Tasks - Quick Start */}
+            {todayTasks.length > 0 && (
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <ListTodo className="w-5 h-5 text-primary" />
+                    Today's Tasks
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Tap to start a focus session
+                    {contextTodayPlan && (
+                      <span className="ml-1 text-primary font-medium">
+                        · {contextTodayPlan.timeblockDuration} min blocks
+                      </span>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 pt-2 sm:pt-3 space-y-2">
+                  {todayTasks.map(item => (
+                    <button
+                      key={item.todayTask.id}
+                      onClick={() => handleQuickStartTodayTask(item)}
+                      className="w-full flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 border-transparent bg-muted/40 hover:bg-primary/10 hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
+                    >
+                      {/* Priority dot */}
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-zinc-800"
+                        style={{ backgroundColor: getPriorityColor(item.task.priorityQuadrant) }}
+                      />
+
+                      {/* Task info */}
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="font-semibold text-sm sm:text-base truncate">
+                          {item.task.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground">
+                            {item.completedBlocks}/{item.todayTask.timeblockCount} blocks
+                          </span>
+                          {item.remainingBlocks > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400">
+                              {item.remainingBlocks} left
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Play icon */}
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Play className="w-4 h-4 text-primary ml-0.5" />
+                      </div>
+                    </button>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Manual Setup - Other Tasks */}
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">
+                  {todayTasks.length > 0 ? 'Other Tasks' : 'Setup Timer'}
+                </CardTitle>
+                <CardDescription className="text-sm sm:text-base">
+                  {todayTasks.length > 0
+                    ? 'Or pick any task from your workplans'
+                    : isFromToday 
+                      ? `Ready to work on "${selectedTask?.title}" for ${localTodayPlan?.timeblockDuration} minutes`
+                      : 'Select a task and timeblock to begin'
+                  }
+                </CardDescription>
+              </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
               <div>
                 <label className="text-sm font-medium mb-2 block">Select Task</label>
@@ -312,6 +414,7 @@ const Timer = () => {
               </Button>
             </CardContent>
           </Card>
+          </div>
         ) : isOnLongBreak ? (
           <Card className="border-2 border-orange-500/30 dark:border-orange-500/50 dark:bg-card/50">
             <CardHeader>
@@ -518,14 +621,75 @@ const Timer = () => {
             )}
           </div>
         ) : (
-          // Timer stopped state - show setup again
-          <Card className="mb-4 sm:mb-6">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Setup Timer</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                Select a task and timeblock to begin a new session
-              </CardDescription>
-            </CardHeader>
+          // Timer stopped state - show today tasks + setup
+          <div className="space-y-4 sm:space-y-6">
+            {/* Today's Tasks - Quick Start */}
+            {todayTasks.length > 0 && (
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <ListTodo className="w-5 h-5 text-primary" />
+                    Today's Tasks
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Tap to start your next focus session
+                    {contextTodayPlan && (
+                      <span className="ml-1 text-primary font-medium">
+                        · {contextTodayPlan.timeblockDuration} min blocks
+                      </span>
+                    )}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 pt-2 sm:pt-3 space-y-2">
+                  {todayTasks.map(item => (
+                    <button
+                      key={item.todayTask.id}
+                      onClick={() => {
+                        resetTimer();
+                        handleQuickStartTodayTask(item);
+                      }}
+                      className="w-full flex items-center gap-3 p-3 sm:p-4 rounded-xl border-2 border-transparent bg-muted/40 hover:bg-primary/10 hover:border-primary/30 active:scale-[0.98] transition-all touch-manipulation"
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-zinc-800"
+                        style={{ backgroundColor: getPriorityColor(item.task.priorityQuadrant) }}
+                      />
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="font-semibold text-sm sm:text-base truncate">
+                          {item.task.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground">
+                            {item.completedBlocks}/{item.todayTask.timeblockCount} blocks
+                          </span>
+                          {item.remainingBlocks > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400">
+                              {item.remainingBlocks} left
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Play className="w-4 h-4 text-primary ml-0.5" />
+                      </div>
+                    </button>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">
+                  {todayTasks.length > 0 ? 'Other Tasks' : 'Start New Session'}
+                </CardTitle>
+                <CardDescription className="text-sm sm:text-base">
+                  {todayTasks.length > 0
+                    ? 'Or pick any task from your workplans'
+                    : 'Select a task and timeblock to begin'
+                  }
+                </CardDescription>
+              </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
               <div>
                 <label className="text-sm font-medium mb-2 block">Select Task</label>
@@ -615,6 +779,7 @@ const Timer = () => {
               </Button>
             </CardContent>
           </Card>
+          </div>
         )}
       </div>
     </div>
