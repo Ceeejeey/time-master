@@ -321,7 +321,7 @@ export const getTimerSessions = async (): Promise<TimerSession[]> => {
   }
 };
 
-export const saveTimerSession = async (session: TimerSession): Promise<void> => {
+export const saveTimerSession = async (session: TimerSession): Promise<string> => {
   try {
     const pausePeriods = JSON.stringify(session.pausePeriods || []);
     
@@ -339,9 +339,14 @@ export const saveTimerSession = async (session: TimerSession): Promise<void> => 
       session.notes || ''
     ];
 
-    if (session.id && session.id.startsWith('session-')) {
-      // Check if exists first
-      const existing = await db.query('SELECT id FROM sessions WHERE id = ?', [session.id.replace('session-', '')]);
+    // Extract the numeric DB id: if it's a pure number string (from DB), use it for UPDATE.
+    // If it starts with 'session-' it's a new in-memory session that hasn't been saved yet.
+    const isNewSession = !session.id || session.id.startsWith('session-');
+    const numericId = isNewSession ? null : session.id;
+
+    if (numericId) {
+      // Try to update existing row
+      const existing = await db.query('SELECT id FROM sessions WHERE id = ?', [numericId]);
       if (existing.values && existing.values.length > 0) {
         await db.run(
           `UPDATE sessions SET 
@@ -349,24 +354,24 @@ export const saveTimerSession = async (session: TimerSession): Promise<void> => 
             productiveSeconds = ?, wastedSeconds = ?, pausePeriods = ?,
             completed = ?, isStopped = ?, isOnLongBreak = ?, notes = ?
           WHERE id = ?`,
-          [...values, session.id.replace('session-', '')]
+          [...values, numericId]
         );
-      } else {
-        await db.run(
-          `INSERT INTO sessions (taskId, timeblockId, startTimestamp, endTimestamp,
-            productiveSeconds, wastedSeconds, pausePeriods, completed, isStopped, isOnLongBreak, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          values
-        );
+        return numericId;
       }
-    } else {
-      await db.run(
-        `INSERT INTO sessions (taskId, timeblockId, startTimestamp, endTimestamp,
-          productiveSeconds, wastedSeconds, pausePeriods, completed, isStopped, isOnLongBreak, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        values
-      );
     }
+
+    // Insert new row and get the auto-generated id
+    await db.run(
+      `INSERT INTO sessions (taskId, timeblockId, startTimestamp, endTimestamp,
+        productiveSeconds, wastedSeconds, pausePeriods, completed, isStopped, isOnLongBreak, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      values
+    );
+
+    // Retrieve the last inserted row id
+    const lastIdResult = await db.query('SELECT last_insert_rowid() as lastId');
+    const newId = lastIdResult.values?.[0]?.lastId?.toString() || session.id;
+    return newId;
   } catch (error) {
     console.error('Error saving timer session:', error);
     throw error;

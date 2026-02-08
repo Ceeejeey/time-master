@@ -11,6 +11,7 @@ interface TimerNotificationPlugin {
     targetTime: string;
     wastedTime: string;
     isPaused: boolean;
+    progressPercent: number;
   }): Promise<void>;
   updateService(options: {
     taskTitle: string;
@@ -18,6 +19,7 @@ interface TimerNotificationPlugin {
     targetTime: string;
     wastedTime: string;
     isPaused: boolean;
+    progressPercent: number;
   }): Promise<void>;
   stopService(): Promise<void>;
   addListener(
@@ -35,6 +37,7 @@ interface TimerNotificationData {
   targetTime: string;
   wastedTime: string;
   isPaused: boolean;
+  progressPercent: number;
 }
 
 class TimerNotificationService {
@@ -46,32 +49,43 @@ class TimerNotificationService {
   private isAppInForeground = true;
   private isServiceRunning = false;
   private listenerHandle: { remove: () => void } | null = null;
+  
+  // Data getter function — uses refs externally for always-fresh values
+  private dataGetter: (() => TimerNotificationData | null) | null = null;
+  
+  // Track last update timestamp to detect stuck intervals
+  private lastUpdateTime = 0;
 
   async initialize() {
     if (this.isInitialized || !Capacitor.isNativePlatform()) return;
 
     try {
-      // Request notification permissions
       const permResult = await LocalNotifications.requestPermissions();
       if (permResult.display !== 'granted') {
         console.warn('[TimerNotification] Permission not granted');
       }
 
-      // Listen for app state changes
       App.addListener('appStateChange', ({ isActive }) => {
         this.isAppInForeground = isActive;
         
         if (isActive) {
-          // App came to foreground - notification continues running in background
           console.log('[TimerNotification] App in foreground');
+          // When returning to foreground, force an immediate update
+          // and restart the interval (it may have been throttled by Android)
+          if (this.dataGetter) {
+            const data = this.dataGetter();
+            if (data) {
+              this.updateNotification(data);
+            }
+            // Restart interval to recover from throttling
+            this.restartInterval();
+          }
         } else if (this.currentData && !this.currentData.isPaused) {
-          // App went to background - start/update the service
           this.startOrUpdateService(this.currentData);
           console.log('[TimerNotification] App in background, service running');
         }
       });
 
-      // Listen for pause/resume actions from notification
       this.listenerHandle = await TimerNotification.addListener('timerAction', (data) => {
         console.log('[TimerNotification] Action received:', data.action);
         if (data.action === 'pause' && this.onPauseCallback) {
@@ -111,14 +125,8 @@ class TimerNotificationService {
 
   async updateNotification(data: TimerNotificationData) {
     this.currentData = data;
-    
-    // Always update the service when running (background or foreground)
-    if (this.isServiceRunning) {
-      await this.startOrUpdateService(data);
-    } else if (!this.isAppInForeground) {
-      // If app is in background and service not running, start it
-      await this.startOrUpdateService(data);
-    }
+    // Always start/update the foreground service when timer is active
+    await this.startOrUpdateService(data);
   }
 
   async stopService() {
@@ -133,18 +141,46 @@ class TimerNotificationService {
     }
   }
 
-  startUpdates(getTimerData: () => TimerNotificationData | null) {
-    // Update notification every second
+  /**
+   * Restart the notification interval (e.g., after returning from background).
+   * Clears old interval and creates a fresh one.
+   */
+  private restartInterval() {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
+      this.updateInterval = null;
     }
+    this.createInterval();
+  }
+
+  /**
+   * Create the notification update interval.
+   */
+  private createInterval() {
+    if (this.updateInterval) return;
 
     this.updateInterval = setInterval(() => {
-      const data = getTimerData();
-      if (data) {
-        this.updateNotification(data);
+      if (this.dataGetter) {
+        const data = this.dataGetter();
+        if (data) {
+          this.lastUpdateTime = Date.now();
+          this.updateNotification(data);
+        }
       }
     }, 1000);
+  }
+
+  /**
+   * Start notification updates using a data getter function.
+   * The getter is called every tick to read the LATEST values (via refs).
+   * Only creates one interval — subsequent calls just update the getter.
+   */
+  startUpdates(getTimerData: () => TimerNotificationData | null) {
+    // Always update the getter so it reads from latest refs
+    this.dataGetter = getTimerData;
+    
+    // Only create the interval if one doesn't already exist
+    this.createInterval();
   }
 
   stopUpdates() {
@@ -152,8 +188,14 @@ class TimerNotificationService {
       clearInterval(this.updateInterval);
       this.updateInterval = null;
     }
+    this.dataGetter = null;
     this.currentData = null;
+    this.lastUpdateTime = 0;
     this.stopService();
+  }
+
+  isActive() {
+    return this.updateInterval !== null;
   }
 
   clearData() {

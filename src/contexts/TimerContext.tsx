@@ -10,6 +10,7 @@ interface TimerContextType {
   session: TimerSession | null;
   selectedTask: Task | null;
   selectedTimeblock: Timeblock | null;
+  instanceId: string | null; // Unique instance ID for tracking sessions per day
   elapsedSeconds: number;
   productiveSeconds: number;
   wastedSeconds: number;
@@ -22,7 +23,7 @@ interface TimerContextType {
   todayPlan: TodayPlan | null;
   
   // Actions
-  setSelectedTask: (task: Task | null) => void;
+  setSelectedTask: (task: Task | null, instanceId?: string | null) => void;
   setSelectedTimeblock: (timeblock: Timeblock | null) => void;
   startTimer: () => Promise<void>;
   pauseTimer: () => Promise<void>;
@@ -54,6 +55,7 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
   const [session, setSession] = useState<TimerSession | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTimeblock, setSelectedTimeblock] = useState<Timeblock | null>(null);
+  const [instanceId, setInstanceId] = useState<string | null>(null); // Unique instance ID for session tracking
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [productiveSeconds, setProductiveSeconds] = useState(0);
   const [wastedSeconds, setWastedSeconds] = useState(0);
@@ -65,6 +67,32 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
   // Refs for notification callbacks
   const pauseTimerRef = useRef<(() => Promise<void>) | null>(null);
   const resumeTimerRef = useRef<(() => Promise<void>) | null>(null);
+  
+  // Ref-based flag to immediately stop tick when break starts (avoids async state delay)
+  const onBreakRef = useRef(false);
+  // Keep a ref of productiveSeconds so stopTimer always has the latest value
+  const productiveSecondsRef = useRef(0);
+  const wastedSecondsRef = useRef(0);
+
+  // Handler to set task with optional instanceId
+  const handleSetSelectedTask = useCallback((task: Task | null, newInstanceId?: string | null) => {
+    setSelectedTask(task);
+    // If instanceId is provided, use it; otherwise generate one or use task.id
+    if (task) {
+      setInstanceId(newInstanceId || task.id);
+    } else {
+      setInstanceId(null);
+    }
+  }, []);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    productiveSecondsRef.current = productiveSeconds;
+  }, [productiveSeconds]);
+  
+  useEffect(() => {
+    wastedSecondsRef.current = wastedSeconds;
+  }, [wastedSeconds]);
 
   // Initialize notification service
   useEffect(() => {
@@ -120,19 +148,27 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       () => resumeTimerRef.current?.()
     );
 
-    // Start notification updates
-    timerNotificationService.startUpdates(() => ({
-      taskTitle: selectedTask.title,
-      productiveTime: formatTimeForNotification(productiveSeconds),
-      targetTime: formatTimeForNotification(targetSeconds),
-      wastedTime: formatTimeForNotification(wastedSeconds),
-      isPaused: isPaused || session.isOnLongBreak,
-    }));
+    // Start notification updates — the getter reads from REFS for always-fresh values.
+    // startUpdates only creates the interval once; subsequent calls just update the getter.
+    timerNotificationService.startUpdates(() => {
+      const currentProductive = productiveSecondsRef.current;
+      const currentWasted = wastedSecondsRef.current;
+      const progress = targetSeconds > 0 ? Math.min(100, Math.round((currentProductive / targetSeconds) * 100)) : 0;
+      
+      return {
+        taskTitle: selectedTask.title,
+        productiveTime: formatTimeForNotification(currentProductive),
+        targetTime: formatTimeForNotification(targetSeconds),
+        wastedTime: formatTimeForNotification(currentWasted),
+        isPaused: isPaused || (session?.isOnLongBreak ?? false),
+        progressPercent: progress,
+      };
+    });
 
     return () => {
       // Don't stop updates on cleanup - let app state change handle it
     };
-  }, [session, selectedTimeblock, selectedTask, productiveSeconds, wastedSeconds, isPaused]);
+  }, [session, selectedTimeblock, selectedTask, isPaused]);
 
   // Timer tick effect with auto-stop when target reached
   useEffect(() => {
@@ -144,6 +180,9 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     const targetSeconds = selectedTimeblock.durationMinutes * 60;
     
     const interval = setInterval(async () => {
+      // Check ref immediately - prevents ticking during break transition
+      if (onBreakRef.current) return;
+      
       if (!isSessionPaused(session) && !session.endTimestamp) {
         setElapsedSeconds(prev => prev + 1);
         setProductiveSeconds(prev => {
@@ -204,9 +243,9 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       isOnLongBreak: false,
     };
 
-    setSession(finalSession);
     setIsTargetReached(true);
-    await saveTimerSession(finalSession);
+    const dbId = await saveTimerSession(finalSession);
+    setSession({ ...finalSession, id: dbId });
     
     // Update today's plan
     try {
@@ -239,7 +278,7 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     const newSession: TimerSession = {
       id: `session-${Date.now()}`,
       userId,
-      taskId: selectedTask.id,
+      taskId: instanceId || selectedTask.id, // Use instanceId for unique daily tracking
       timeblockId: selectedTimeblock.id,
       startTimestamp: new Date().toISOString(),
       pausePeriods: [],
@@ -250,21 +289,24 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       isOnLongBreak: false,
     };
 
-    setSession(newSession);
     setElapsedSeconds(0);
     setProductiveSeconds(0);
     setWastedSeconds(0);
     setIsPaused(false);
     setIsTargetReached(false);
-    await saveTimerSession(newSession);
+    
+    // Save and capture the DB-assigned ID
+    const dbId = await saveTimerSession(newSession);
+    const sessionWithDbId = { ...newSession, id: dbId };
+    setSession(sessionWithDbId);
     
     // Load today's plan
     const today = format(new Date(), 'yyyy-MM-dd');
     const plan = await getTodayPlan(today);
     setTodayPlan(plan);
     
-    console.log('[Timer] Started:', selectedTask.title);
-  }, [selectedTask, selectedTimeblock]);
+    console.log('[Timer] Started:', selectedTask.title, 'Instance:', instanceId, 'DB ID:', dbId);
+  }, [selectedTask, selectedTimeblock, instanceId]);
 
   const pauseTimer = useCallback(async () => {
     if (!session || !selectedTimeblock) return;
@@ -277,9 +319,9 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       ],
     };
 
-    setSession(updatedSession);
     setIsPaused(true);
-    await saveTimerSession(updatedSession);
+    const dbId = await saveTimerSession(updatedSession);
+    setSession({ ...updatedSession, id: dbId });
     
     console.log('[Timer] Paused');
   }, [session, selectedTimeblock]);
@@ -299,9 +341,9 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     };
 
     setWastedSeconds(getTotalPauseTimeSeconds(updatedSession));
-    setSession(updatedSession);
     setIsPaused(false);
-    await saveTimerSession(updatedSession);
+    const dbId = await saveTimerSession(updatedSession);
+    setSession({ ...updatedSession, id: dbId });
     
     console.log('[Timer] Resumed');
   }, [session, selectedTimeblock]);
@@ -323,25 +365,37 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
 
     const endTimestamp = new Date().toISOString();
     
-    const updatedSession = {
-      ...session,
-      pausePeriods: updatedPausePeriods,
-      productiveSeconds: productiveSeconds,
-      endTimestamp,
-    };
+    // Use ref for the most up-to-date productive/wasted values
+    const currentProductive = productiveSecondsRef.current;
+    const targetSeconds = selectedTimeblock.durationMinutes * 60;
     
-    const stats = calculateSessionStats(updatedSession, selectedTimeblock.durationMinutes);
+    // Calculate wasted time: remaining unused timeblock time + actual pause time
+    const remainingSeconds = Math.max(0, targetSeconds - currentProductive);
+    let totalPauseSeconds = 0;
+    for (const pause of updatedPausePeriods) {
+      if (pause.pauseEnd) {
+        const pStart = new Date(pause.pauseStart).getTime();
+        const pEnd = new Date(pause.pauseEnd).getTime();
+        totalPauseSeconds += Math.floor((pEnd - pStart) / 1000);
+      }
+    }
+    const calculatedWasted = remainingSeconds + totalPauseSeconds;
+    
+    const completed = currentProductive >= targetSeconds * 0.9;
 
     const finalSession: TimerSession = {
-      ...updatedSession,
-      ...stats,
-      completed: true,
+      ...session,
+      pausePeriods: updatedPausePeriods,
+      productiveSeconds: currentProductive,
+      wastedSeconds: calculatedWasted,
+      endTimestamp,
+      completed,
       isStopped: true,
       isOnLongBreak: false,
     };
 
-    setSession(finalSession);
-    await saveTimerSession(finalSession);
+    const dbId = await saveTimerSession(finalSession);
+    setSession({ ...finalSession, id: dbId });
     
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -362,11 +416,18 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     }
     
     timerNotificationService.stopUpdates();
-    console.log('[Timer] Stopped - Productive:', stats.productiveSeconds, 'Wasted:', stats.wastedSeconds);
-  }, [session, selectedTimeblock, selectedTask, productiveSeconds]);
+    console.log('[Timer] Stopped - Productive:', currentProductive, 'Wasted:', calculatedWasted);
+  }, [session, selectedTimeblock, selectedTask]);
 
   const takeLongBreak = useCallback(async () => {
     if (!session || !selectedTimeblock) return;
+
+    // IMMEDIATELY set ref flag to stop tick interval (synchronous, no React delay)
+    onBreakRef.current = true;
+    
+    // Use refs for the most up-to-date values
+    const currentProductive = productiveSecondsRef.current;
+    const currentWasted = wastedSecondsRef.current;
 
     // Close any open pause period
     const updatedPausePeriods = [...session.pausePeriods];
@@ -375,45 +436,55 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
       lastPause.pauseEnd = new Date().toISOString();
     }
 
-    // Save current timer state values (not recalculated from pause periods)
+    // Save current timer state values (from refs for accuracy)
     const updatedSession: TimerSession = {
       ...session,
       pausePeriods: updatedPausePeriods,
-      productiveSeconds: productiveSeconds,  // Save current productive time
-      wastedSeconds: wastedSeconds,          // Save current wasted time
+      productiveSeconds: currentProductive,
+      wastedSeconds: currentWasted,
       isOnLongBreak: true,
       isStopped: false,
     };
 
-    setSession(updatedSession);
     setIsPaused(true);
-    await saveTimerSession(updatedSession);
+    const dbId = await saveTimerSession(updatedSession);
+    setSession({ ...updatedSession, id: dbId });
     
-    console.log('[Timer] Long break started - Saved productive:', productiveSeconds, 'wasted:', wastedSeconds);
-  }, [session, selectedTimeblock, productiveSeconds, wastedSeconds]);
+    console.log('[Timer] Long break started - Saved productive:', currentProductive, 'wasted:', currentWasted, 'DB ID:', dbId);
+  }, [session, selectedTimeblock]);
 
   const resumeFromLongBreak = useCallback(async () => {
     if (!session || !selectedTimeblock) return;
 
     console.log('[Timer] Resuming from long break - Restoring productive:', session.productiveSeconds, 'wasted:', session.wastedSeconds);
 
+    // Restore the saved timer state BEFORE updating session (so tick effect uses correct starting values)
+    const savedProductive = session.productiveSeconds || 0;
+    const savedWasted = session.wastedSeconds || 0;
+    
+    setProductiveSeconds(savedProductive);
+    setWastedSeconds(savedWasted);
+    setElapsedSeconds(savedProductive + savedWasted);
+    
+    // Update refs to match restored values
+    productiveSecondsRef.current = savedProductive;
+    wastedSecondsRef.current = savedWasted;
+
     const updatedSession: TimerSession = {
       ...session,
       isOnLongBreak: false,
       isStopped: false,
-      // Don't add a new pause period - just resume where we left off
     };
 
-    // Restore the saved timer state
-    setProductiveSeconds(session.productiveSeconds);
-    setWastedSeconds(session.wastedSeconds);
-    setElapsedSeconds(session.productiveSeconds + session.wastedSeconds);
-    setSession(updatedSession);
     setIsPaused(false);
     
-    await saveTimerSession(updatedSession);
+    // Clear break flag AFTER state updates so tick effect resumes with correct values
+    onBreakRef.current = false;
     
-    console.log('[Timer] Resumed from long break');
+    const dbId = await saveTimerSession(updatedSession);
+    setSession({ ...updatedSession, id: dbId });
+    
+    console.log('[Timer] Resumed from long break - productive:', savedProductive, 'wasted:', savedWasted, 'DB ID:', dbId);
   }, [session, selectedTimeblock]);
 
   const getProgress = useCallback(() => {
@@ -442,6 +513,9 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
   }, []);
 
   const resetTimer = useCallback(() => {
+    onBreakRef.current = false;
+    productiveSecondsRef.current = 0;
+    wastedSecondsRef.current = 0;
     setSession(null);
     setSelectedTask(null);
     setSelectedTimeblock(null);
@@ -458,6 +532,7 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     session,
     selectedTask,
     selectedTimeblock,
+    instanceId,
     elapsedSeconds,
     productiveSeconds,
     wastedSeconds,
@@ -468,7 +543,7 @@ export const TimerProvider: React.FC<TimerProviderProps> = ({ children }) => {
     isTargetReached,
     remainingBlocks,
     todayPlan,
-    setSelectedTask,
+    setSelectedTask: handleSetSelectedTask,
     setSelectedTimeblock,
     startTimer,
     pauseTimer,

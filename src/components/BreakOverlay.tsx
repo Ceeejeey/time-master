@@ -41,8 +41,9 @@ export const BreakOverlay: React.FC = () => {
     const savedState = await stopBreak();
     
     // If timer was running before break, resume it
+    // MUST await to ensure timer state is fully restored before UI updates
     if (savedState?.wasTimerRunning && isOnLongBreak) {
-      resumeFromLongBreak();
+      await resumeFromLongBreak();
     }
   };
 

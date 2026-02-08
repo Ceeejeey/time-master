@@ -14,6 +14,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import android.view.View;
+import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
 
@@ -33,6 +35,7 @@ public class TimerForegroundService extends Service {
     private static final String EXTRA_TARGET_TIME = "target_time";
     private static final String EXTRA_WASTED_TIME = "wasted_time";
     private static final String EXTRA_IS_PAUSED = "is_paused";
+    private static final String EXTRA_PROGRESS_PERCENT = "progress_percent";
 
     private NotificationManager notificationManager;
     private Handler handler;
@@ -43,6 +46,7 @@ public class TimerForegroundService extends Service {
     private String targetTime = "25:00";
     private String wastedTime = "0:00";
     private boolean isPaused = false;
+    private int progressPercent = 0;
 
     private BroadcastReceiver actionReceiver;
 
@@ -61,11 +65,14 @@ public class TimerForegroundService extends Service {
             @Override
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();
+                Log.d(TAG, "Action received in service: " + action);
                 if (ACTION_PAUSE.equals(action) || ACTION_RESUME.equals(action)) {
-                    // Send broadcast to JavaScript layer
+                    // Use explicit intent with package name so RECEIVER_NOT_EXPORTED works
                     Intent jsIntent = new Intent("com.timemaster.app.TIMER_ACTION");
+                    jsIntent.setPackage(getPackageName());
                     jsIntent.putExtra("action", ACTION_PAUSE.equals(action) ? "pause" : "resume");
                     sendBroadcast(jsIntent);
+                    Log.d(TAG, "Forwarded action to plugin: " + (ACTION_PAUSE.equals(action) ? "pause" : "resume"));
                 }
             }
         };
@@ -98,6 +105,7 @@ public class TimerForegroundService extends Service {
                 targetTime = intent.getStringExtra(EXTRA_TARGET_TIME);
                 wastedTime = intent.getStringExtra(EXTRA_WASTED_TIME);
                 isPaused = intent.getBooleanExtra(EXTRA_IS_PAUSED, false);
+                progressPercent = intent.getIntExtra(EXTRA_PROGRESS_PERCENT, 0);
                 
                 if (taskTitle == null) taskTitle = "Timer";
                 if (productiveTime == null) productiveTime = "0:00";
@@ -153,23 +161,76 @@ public class TimerForegroundService extends Service {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // Pause/Resume action
+        // Pause/Resume action — must use explicit intent with package
         Intent actionIntent = new Intent(isPaused ? ACTION_RESUME : ACTION_PAUSE);
+        actionIntent.setPackage(getPackageName());
         PendingIntent actionPendingIntent = PendingIntent.getBroadcast(
             this,
-            1,
+            isPaused ? 2 : 1,
             actionIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
         );
 
-        String title = isPaused ? "⏸️ Timer Paused" : "⏱️ Timer Running";
-        String content = buildNotificationContent();
+        // --- Collapsed view ---
+        RemoteViews collapsedView = new RemoteViews(getPackageName(), R.layout.notification_timer);
+        collapsedView.setTextViewText(R.id.notification_productive_time, productiveTime);
+        collapsedView.setTextViewText(R.id.notification_target_time, targetTime);
 
+        // Show wasted time in collapsed view when paused
+        boolean hasWasted = wastedTime != null && !wastedTime.equals("0:00");
+        if (isPaused && hasWasted) {
+            collapsedView.setViewVisibility(R.id.notification_wasted_collapsed, View.VISIBLE);
+            collapsedView.setTextViewText(R.id.notification_wasted_collapsed, "\u23F1 " + wastedTime);
+        } else {
+            collapsedView.setViewVisibility(R.id.notification_wasted_collapsed, View.GONE);
+        }
+
+        // Pause/Play icon button
+        if (isPaused) {
+            collapsedView.setImageViewResource(R.id.notification_pause_btn, R.drawable.ic_notification_play);
+            collapsedView.setInt(R.id.notification_pause_btn, "setBackgroundResource", R.drawable.notification_badge_glass_paused);
+        } else {
+            collapsedView.setImageViewResource(R.id.notification_pause_btn, R.drawable.ic_notification_pause);
+            collapsedView.setInt(R.id.notification_pause_btn, "setBackgroundResource", R.drawable.notification_badge_glass);
+        }
+        collapsedView.setOnClickPendingIntent(R.id.notification_pause_btn, actionPendingIntent);
+
+        // --- Expanded view (glassmorphism detailed) ---
+        RemoteViews expandedView = new RemoteViews(getPackageName(), R.layout.notification_timer_expanded);
+        expandedView.setTextViewText(R.id.notification_task_title, taskTitle);
+        expandedView.setTextViewText(R.id.notification_productive_time, productiveTime);
+        expandedView.setTextViewText(R.id.notification_target_time, targetTime);
+        expandedView.setProgressBar(R.id.notification_progress, 100, progressPercent, false);
+        expandedView.setTextViewText(R.id.notification_progress_text, progressPercent + "%");
+
+        // Status badge
+        if (isPaused) {
+            expandedView.setTextViewText(R.id.notification_status_badge, "PAUSED");
+            expandedView.setInt(R.id.notification_status_badge, "setBackgroundResource", R.drawable.notification_badge_glass_paused);
+            expandedView.setImageViewResource(R.id.notification_pause_btn, R.drawable.ic_notification_play);
+            expandedView.setInt(R.id.notification_pause_btn, "setBackgroundResource", R.drawable.notification_badge_glass_paused);
+        } else {
+            expandedView.setTextViewText(R.id.notification_status_badge, "FOCUSING");
+            expandedView.setInt(R.id.notification_status_badge, "setBackgroundResource", R.drawable.notification_badge_glass);
+            expandedView.setImageViewResource(R.id.notification_pause_btn, R.drawable.ic_notification_pause);
+            expandedView.setInt(R.id.notification_pause_btn, "setBackgroundResource", R.drawable.notification_badge_glass);
+        }
+        expandedView.setOnClickPendingIntent(R.id.notification_pause_btn, actionPendingIntent);
+
+        // Wasted time (expanded only) - show when paused or when there's wasted time
+        boolean showWasted = isPaused || (wastedTime != null && !wastedTime.equals("0:00"));
+        expandedView.setViewVisibility(R.id.notification_wasted_container,
+            showWasted ? View.VISIBLE : View.GONE);
+        if (showWasted) {
+            expandedView.setTextViewText(R.id.notification_wasted_time, wastedTime != null ? wastedTime : "0:00");
+        }
+
+        // Build the notification
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_timer)
-            .setContentTitle(title)
-            .setContentText(content)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(content))
+            .setCustomContentView(collapsedView)
+            .setCustomBigContentView(expandedView)
+            .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
             .setContentIntent(openAppPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
@@ -178,25 +239,9 @@ public class TimerForegroundService extends Service {
             .setShowWhen(false)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(false)
-            .addAction(
-                isPaused ? android.R.drawable.ic_media_play : android.R.drawable.ic_media_pause,
-                isPaused ? "Resume" : "Pause",
-                actionPendingIntent
-            );
+            .setColor(isPaused ? 0xFFFFB74D : 0xFF80D0FF);
 
         return builder.build();
-    }
-
-    private String buildNotificationContent() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(taskTitle).append("\n");
-        sb.append("🎯 ").append(productiveTime).append(" / ").append(targetTime);
-        
-        if (isPaused && wastedTime != null && !wastedTime.equals("0:00")) {
-            sb.append("\n⚠️ Wasted: ").append(wastedTime);
-        }
-        
-        return sb.toString();
     }
 
     @Override

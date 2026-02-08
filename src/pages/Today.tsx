@@ -190,17 +190,17 @@ const Today = () => {
     return workplans.some((wp) => wp.tasks.includes(task.id));
   });
 
-  // Calculate completed timeblocks from sessions
-  const getCompletedTimeblocks = (taskId: string) => {
+  // Calculate completed timeblocks from sessions for a specific instance
+  const getCompletedTimeblocks = (instanceId: string) => {
     return sessions.filter(
-      (s) => s.taskId === taskId && s.completed && s.isStopped
+      (s) => s.taskId === instanceId && s.completed && s.isStopped
     ).length;
   };
 
-  // Calculate total productive time for a task
-  const getTotalProductiveTime = (taskId: string) => {
+  // Calculate total productive time for a task instance
+  const getTotalProductiveTime = (instanceId: string) => {
     return sessions
-      .filter((s) => s.taskId === taskId && s.isStopped)
+      .filter((s) => s.taskId === instanceId && s.isStopped)
       .reduce((sum, s) => sum + (s.productiveSeconds || 0), 0);
   };
 
@@ -391,13 +391,16 @@ const Today = () => {
                   const task = tasks.find((t) => t.id === todayTask.taskId);
                   if (!task) return null;
 
+                  // Use instanceId if available, fallback to taskId for backward compatibility
+                  const trackingId = todayTask.instanceId || todayTask.taskId;
+                  
                   const totalMinutes =
                     todayTask.timeblockCount * timeblockDuration;
-                  const completedBlocks = getCompletedTimeblocks(task.id);
+                  const completedBlocks = getCompletedTimeblocks(trackingId);
                   const remainingBlocksForTask =
                     todayTask.timeblockCount - completedBlocks;
                   const isTaskFullyCompleted = remainingBlocksForTask <= 0;
-                  const totalProductiveTime = getTotalProductiveTime(task.id);
+                  const totalProductiveTime = getTotalProductiveTime(trackingId);
 
                   return (
                     <div
@@ -520,7 +523,8 @@ const Today = () => {
                             className="flex-1 gap-2"
                             onClick={() => {
                               handleAction('click-start-task-today');
-                              navigate(`/timer?taskId=${task.id}`);
+                              // Pass both taskId (for display) and instanceId (for session tracking)
+                              navigate(`/timer?taskId=${task.id}&instanceId=${encodeURIComponent(trackingId)}`);
                             }}
                             data-tutorial="start-task-button"
                           >

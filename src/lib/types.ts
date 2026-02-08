@@ -52,7 +52,8 @@ export interface Workplan {
 
 export interface TodayTask {
   id: string;
-  taskId: string;
+  taskId: string; // Original template task ID from workplan
+  instanceId: string; // Unique instance ID for this day (taskId + date)
   timeblockCount: number; // Number of timeblocks to allocate
   completed: boolean;
   order: number;

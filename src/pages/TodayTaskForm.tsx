@@ -60,6 +60,10 @@ const TodayTaskForm = () => {
     try {
       const userId = getCurrentUserId();
       const today = format(new Date(), 'yyyy-MM-dd');
+      
+      // Create a unique instance ID for this task on this day
+      // This ensures the same template task can be used on multiple days independently
+      const instanceId = `${selectedTaskId}_${today}_${Date.now()}`;
 
       const updatedPlan: TodayPlan = todayPlan ? {
         ...todayPlan,
@@ -68,6 +72,7 @@ const TodayTaskForm = () => {
           {
             id: `today-task-${Date.now()}`,
             taskId: selectedTaskId,
+            instanceId: instanceId,
             timeblockCount: blocks,
             completed: false,
             order: todayPlan.tasks.length,
@@ -82,6 +87,7 @@ const TodayTaskForm = () => {
         tasks: [{
           id: `today-task-${Date.now()}`,
           taskId: selectedTaskId,
+          instanceId: instanceId,
           timeblockCount: blocks,
           completed: false,
           order: 0,

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
+
+    <!-- Productive time (large, bright) -->
+    <TextView
+        android:id="@+id/notification_productive_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0:00"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFFFF"
+        android:fontFamily="monospace" />
+
+    <!-- Separator -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=" / "
+        android:textSize="14sp"
+        android:textColor="#99FFFFFF" />
+
+    <!-- Target time -->
+    <TextView
+        android:id="@+id/notification_target_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="25:00"
+        android:textSize="14sp"
+        android:textColor="#99FFFFFF"
+        android:fontFamily="monospace" />
+
+    <!-- Wasted time (shown when paused) -->
+    <TextView
+        android:id="@+id/notification_wasted_collapsed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="13sp"
+        android:textColor="#FFFFB74D"
+        android:fontFamily="monospace"
+        android:layout_marginStart="10dp"
+        android:visibility="gone" />
+
+    <!-- Spacer -->
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1" />
+
+    <!-- Pause/Resume button -->
+    <ImageView
+        android:id="@+id/notification_pause_btn"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_notification_pause"
+        android:scaleType="centerInside"
+        android:padding="6dp"
+        android:background="@drawable/notification_badge_glass"
+        android:contentDescription="Pause" />
+
+</LinearLayout>

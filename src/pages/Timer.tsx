@@ -78,10 +78,11 @@ const Timer = () => {
       // Only pre-select task if timer is not already running
       if (!isRunning && !isOnLongBreak) {
         const taskId = searchParams.get('taskId');
+        const instanceIdParam = searchParams.get('instanceId'); // Get instanceId from URL
         if (taskId) {
           const task = tasks.find(t => t.id === taskId);
           if (task) {
-            setSelectedTask(task);
+            setSelectedTask(task, instanceIdParam); // Pass instanceId for unique daily tracking
             
             // Check if this task is from today's plan
             const today = format(new Date(), 'yyyy-MM-dd');
@@ -210,11 +211,13 @@ const Timer = () => {
                   value={selectedTask?.id}
                   onValueChange={async (id) => {
                     const task = tasks.find(t => t.id === id);
-                    setSelectedTask(task || null);
+                    // Generate a new instanceId for manual selection (not from Today page)
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    const newInstanceId = `instance-${today}-${id}-${Date.now()}`;
+                    setSelectedTask(task || null, newInstanceId);
                     
                     if (task) {
                       // Check if this task is from today's plan
-                      const today = format(new Date(), 'yyyy-MM-dd');
                       const todayPlanData = await getTodayPlan(today);
                       if (todayPlanData && todayPlanData.tasks.some(t => t.taskId === id)) {
                         setLocalTodayPlan(todayPlanData);
@@ -530,10 +533,12 @@ const Timer = () => {
                   value={selectedTask?.id}
                   onValueChange={async (id) => {
                     const task = tasks.find(t => t.id === id);
-                    setSelectedTask(task || null);
+                    // Generate a new instanceId for manual selection (not from Today page)
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    const newInstanceId = `instance-${today}-${id}-${Date.now()}`;
+                    setSelectedTask(task || null, newInstanceId);
                     
                     if (task) {
-                      const today = format(new Date(), 'yyyy-MM-dd');
                       const todayPlanData = await getTodayPlan(today);
                       if (todayPlanData && todayPlanData.tasks.some(t => t.taskId === id)) {
                         setLocalTodayPlan(todayPlanData);

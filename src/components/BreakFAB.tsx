@@ -46,15 +46,17 @@ export const BreakFAB: React.FC = () => {
     return null;
   }
 
-  const handleStartBreak = () => {
+  const handleStartBreak = async () => {
     const wasTimerRunning = isRunning || (session && !session.isStopped && !session.endTimestamp);
     
     // If timer was running, save its state and put it on long break
+    // MUST await to ensure timer state is fully saved before starting break
     if (wasTimerRunning && session) {
-      takeLongBreak();
+      await takeLongBreak();
     }
     
     // Start the break with saved timer state
+    // Use refs via the context values which are now frozen after takeLongBreak
     startBreak(
       selectedDuration,
       productiveSeconds,

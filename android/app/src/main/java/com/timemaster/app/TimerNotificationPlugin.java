@@ -39,7 +39,8 @@ public class TimerNotificationPlugin extends Plugin {
         
         IntentFilter filter = new IntentFilter("com.timemaster.app.TIMER_ACTION");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            getContext().registerReceiver(timerActionReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            // Use RECEIVER_EXPORTED so we can receive broadcasts from the foreground service
+            getContext().registerReceiver(timerActionReceiver, filter, Context.RECEIVER_EXPORTED);
         } else {
             getContext().registerReceiver(timerActionReceiver, filter);
         }
@@ -52,6 +53,7 @@ public class TimerNotificationPlugin extends Plugin {
         String targetTime = call.getString("targetTime", "25:00");
         String wastedTime = call.getString("wastedTime", "0:00");
         boolean isPaused = call.getBoolean("isPaused", false);
+        int progressPercent = call.getInt("progressPercent", 0);
 
         Intent intent = new Intent(getContext(), TimerForegroundService.class);
         intent.setAction(TimerForegroundService.ACTION_START);
@@ -60,6 +62,7 @@ public class TimerNotificationPlugin extends Plugin {
         intent.putExtra("target_time", targetTime);
         intent.putExtra("wasted_time", wastedTime);
         intent.putExtra("is_paused", isPaused);
+        intent.putExtra("progress_percent", progressPercent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getContext().startForegroundService(intent);
@@ -78,6 +81,7 @@ public class TimerNotificationPlugin extends Plugin {
         String targetTime = call.getString("targetTime", "25:00");
         String wastedTime = call.getString("wastedTime", "0:00");
         boolean isPaused = call.getBoolean("isPaused", false);
+        int progressPercent = call.getInt("progressPercent", 0);
 
         Intent intent = new Intent(getContext(), TimerForegroundService.class);
         intent.setAction(TimerForegroundService.ACTION_UPDATE);
@@ -86,6 +90,7 @@ public class TimerNotificationPlugin extends Plugin {
         intent.putExtra("target_time", targetTime);
         intent.putExtra("wasted_time", wastedTime);
         intent.putExtra("is_paused", isPaused);
+        intent.putExtra("progress_percent", progressPercent);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getContext().startForegroundService(intent);
